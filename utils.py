@@ -87,5 +87,3 @@ def prepare_linelist(linelist, wavelengths):
             s[i] = ew[idx][0]
             i += 1
     return s.reshape(1, -1)
-
-#create_combined()

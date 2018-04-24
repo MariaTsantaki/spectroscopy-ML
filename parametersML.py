@@ -48,20 +48,23 @@ def _parser():
 
 
 def train(clf, save=True, plot=True):
-    create_combined()
+    if not os.path.isfile('combined_spec.csv'):
+        create_combined()
     df = pd.read_csv('combined_spec.csv', index_col=0)
-    #hdulist = fits.open('combined.fits')
-    #df = pd.DataFrame(hdulist[0].data)
+    # hdulist = fits.open('combined.fits')
+    # df = pd.DataFrame(hdulist[0].data)
     df.set_index('spectrum', inplace=True)
+    # print(df.head())
     xlabel = df.columns.values[:-6]
-    print(df)
     ylabel = df.columns.values[-6:]
     X = df.loc[:, xlabel]
     y = df.loc[:, ylabel]
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33)
 
+    t = time()
     clf.fit(X_train, y_train)
+    print('Trained on {} spectra in {}s\n'.format(len(df), round(time()-t, 2)))
 
     N = len(y_test)
     t = time()
