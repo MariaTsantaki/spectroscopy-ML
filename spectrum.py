@@ -12,6 +12,7 @@ class Spectrum:
         self.wavelength = wavelength
         self.flux = flux
         self.new_grid = False
+        self.normalize = False
 
     def interpolate(self, w):
         """
@@ -24,6 +25,14 @@ class Spectrum:
         #   self.new_grid = True
         raise NotImplemented('Someone do this')
 
+    def normalize(self):
+        """
+        Normalize the spectrum to put on a scale as the trained model
+        """
+        # Good luck
+        #   self.normalize = True
+        raise NotImplemented('Someone do this')
+
     def set_model(self, fname):
         with open(fname, 'rb') as f:
             print('Loading model...')
@@ -33,6 +42,10 @@ class Spectrum:
     def get_parameters(self):
         if 'model' not in self.__dict__.keys():
             raise ValueError('Please set a model first with "set_model(fname)"')
+        # if not self.normalize:
+        #     raise ValueError('Please normalize the spectrum first')
+        # if not self.new_grid:
+        #     raise ValueError('Please put the spectrum on the same grid as the model')
         self.parameters = self.model.predict(self.flux.reshape(1, -1))
         return self.parameters
 
@@ -60,6 +73,9 @@ if __name__ == '__main__':
     # Interpolate to a new wavelength scale.
     # This should be the header of the 'combined_spec.csv'
     # spectrum.interpolate(new_wavelength)
+
+    # Normalize the spectrum
+    # spectrum.normalize()
 
     # Set a model
     spectrum.set_model('FASMA_ML.pkl')
