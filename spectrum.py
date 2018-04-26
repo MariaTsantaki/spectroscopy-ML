@@ -1,3 +1,4 @@
+from scipy.interpolate import interp1d
 try:
     import cPickle
 except ImportError:
@@ -14,16 +15,19 @@ class Spectrum:
         self.new_grid = False
         self.normalize = False
 
-    def interpolate(self, w):
+    def interpolate(self, w, kind='linear'):
         """
         Interpolate the spectrum to the new wavelength 'w'
         """
+        if (w[0] < self.wavelength[0]) or (w[-1] > self.wavelength[-1]):
+            raise ValueError('New grid extend beyond the spectrum. Choose a smaller region')
+        # TODO: Make a warning if the "resolution" is higher for the new wavelength
         # Find the interpolation
-        # Apply it, and set:
-        #   self.flux = new_flux
-        #   self.wavelength = w
-        #   self.new_grid = True
-        raise NotImplemented('Someone do this')
+        f = interp1d(self.wavelength, self.flux, kind=kind)
+        # Apply the interpolation on new wavelength grid
+        self.flux = f(w)
+        self.wavelength = w
+        self.new_grid = True
 
     def normalize(self):
         """
