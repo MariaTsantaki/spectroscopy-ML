@@ -1,45 +1,36 @@
+import os
 import numpy as np
 import pandas as pd
 from glob import glob
+from astropy.io import fits
 
 
 def create_combined():
-
-    from astropy.io import fits
-
-    #read synthetic fluxes
+    # read synthetic fluxes
     spectra = glob('synthetic_spec/results/*.spec')
     spectra = list(map(lambda x: x[23:], spectra))
 
-    data = []
-    for specname in spectra[:]:
-        hdulist = fits.open('synthetic_spec/results/' + specname)
-        x = hdulist[1].data
-        flux = x['flux']
-        wave = x['wavelength']
-        teff  = specname.split('_')[0]
-        logg  = specname.split('_')[1]
-        feh   = specname.split('_')[2]
-        vmic  = specname.split('_')[3]
-        vmac  = specname.split('_')[4]
-        vsini = specname.split('_')[5]
-        #flux = flux.tolist()
-        #wave = wave.tolist()
-        #params = flux.extend([teff, logg, feh, vmic, vmac, vsini])
-        #params = np.insert(flux, len(flux), [teff, logg, feh, vmic, vmac, vsini, specname])
-        params = np.append(flux, [teff, logg, feh, vmic, vmac, vsini, specname])
-        params = params.tolist()
-        data.append(params)
-        #columns = wave.append(['teff', 'logg', 'feh', 'vmic', 'vmac', 'vsini'])
-        #params = np.insert(flux, len(flux), [teff, logg, feh, vmic, vmac, vsini])
-        columns = np.append(wave, ['teff', 'logg', 'feh', 'vmic', 'vmac', 'vsini', 'spectrum'])
+    fname = 'combined_specT.csv'
+    if os.path.isfile(fname):
+        os.remove(fname)
 
-    header = columns.tolist()
-    data = np.array(data)
-    df = pd.DataFrame(data)
-    df.columns = header
-    df.to_csv('combined_spec.csv')
-    return
+    with open(fname, 'a') as f:
+        for i, spectrum in enumerate(spectra):
+            d = fits.getdata('synthetic_spec/results/{}'.format(spectrum))
+            if i == 0:
+                wavelengths = list(map(str, d['wavelength']))
+                header = ','.join(wavelengths) + ',teff,logg,feh,vmic,vmac,vsini,spectrum\n'
+                f.write(header)
+            else:
+                flux = list(map(str, d['flux']))
+                teff  = spectrum.split('_')[0]
+                logg  = spectrum.split('_')[1]
+                feh   = spectrum.split('_')[2]
+                vmic  = spectrum.split('_')[3]
+                vmac  = spectrum.split('_')[4]
+                vsini = spectrum.split('_')[5]
+                data = ','.join(flux + [teff, logg, feh, vmic, vmac, vsini, spectrum])
+                f.write(data + '\n')
 
 
 def find_star(star):
