@@ -81,7 +81,7 @@ def prepare_linelist(linelist, wavelengths):
     return s.reshape(1, -1)
 
 # These functions and the observations.py should go to the spectrum.py
-def prepare_spectrum(spectrum):
+def prepare_spectrum(spectrum, intname='intervals.lst'):
     from scipy.interpolate import InterpolatedUnivariateSpline
 
     if not os.path.isfile(intname):
