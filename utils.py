@@ -8,7 +8,7 @@ from astropy.io import fits
 def create_combined():
     # read synthetic fluxes
     spectra = glob('synthetic_spec/results/*.spec')
-    spectra = list(map(lambda x: x[23:], spectra))
+    spectra = list(map(lambda x: x.split('/')[-1], spectra))
 
     fname = 'combined_specT.csv'
     if os.path.isfile(fname):
