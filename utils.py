@@ -49,37 +49,13 @@ def create_combined():
     return
 
 
-def find_star(star):
-    linelists = glob('linelist/*.moog')
-    linelists = list(map(lambda x: x[9:], linelists))
-
-    affixes = ('', '_rv', '_rv2')
-    for affix in affixes:
-        fname = '{}{}.moog'.format(star, affix)
-        if fname in linelists:
-            return 'linelist/{}'.format(fname)
-    raise IOError('{} not found'.format(star))
-
-
-def read_star(fname):
-    columns = ('wavelength', 'element', 'EP', 'loggf', 'EW')
-    df = pd.read_csv(fname, delimiter=r'\s+',
-                     names=columns,
-                     skiprows=1,
-                     usecols=['wavelength', 'EW'])
-    return df
-
-
-def add_parameters(df_all, df, star):
-    for parameter in ('teff', 'logg', 'feh', 'vt'):
-        df_all.loc[star, parameter] = df.loc[star, parameter]
-    return df_all
-
-
-def merge_linelist(df_all, df, star):
-    for wavelength in df['wavelength']:
-        df_all.loc[star, wavelength] = df[df['wavelength']==wavelength]['EW'].values[0]
-    return df_all
+def snr_apogee(fname):
+    hdulist = fits.open(fname)
+    header = hdulist[1].header
+    try:
+        return header['SNR']
+    except KeyError as e:
+        return 100
 
 
 def prepare_linelist(linelist, wavelengths):

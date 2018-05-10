@@ -50,9 +50,9 @@ def local_norm(obs_fname, r, SNR, method='linear', plot=False):
     fluxout = np.zeros(n)
     for i in range(n):
         if flux_obs[i] > (med + (sigma*5.0)):
-           fluxout[i] = med
-	else:
-	   fluxout[i] = flux_obs[i]
+            fluxout[i] = med
+        else:
+            fluxout[i] = flux_obs[i]
     flux_obs = fluxout
 
     if (end_norm-start_norm) > 40:
@@ -118,9 +118,9 @@ def local_norm(obs_fname, r, SNR, method='linear', plot=False):
     fluxout = np.zeros(n)
     for i in range(n):
         if new_flux2[i] > (med + (sigma*4.0)):
-           fluxout[i] = med
-	else:
-	   fluxout[i] = new_flux2[i]
+            fluxout[i] = med
+        else:
+            fluxout[i] = new_flux2[i]
     new_flux2 = fluxout
 
     wave = wave_obs[np.where((wave_obs >= float(r[0])) & (wave_obs <= float(r[1])))]
