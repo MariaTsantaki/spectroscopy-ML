@@ -45,7 +45,7 @@ def create_combined():
     data = np.array(data)
     df = pd.DataFrame(data)
     df.columns = header
-    df.to_csv('combined_spec.csv')
+    df.to_hdf('combined_spec.hdf', key='spectrum', mode='w')
     return
 
 
