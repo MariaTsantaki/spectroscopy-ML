@@ -50,7 +50,7 @@ def _parser():
 def train(clf, save=True, plot=True):
     if not os.path.isfile('combined_spec.csv'):
         create_combined()
-    df = pd.read_csv('combined_spec.csv', index_col=0)
+    df = pd.read_csv('combined_spec.csv')
     df.set_index('spectrum', inplace=True)
     xlabel = df.columns.values[:-6]
     ylabel = df.columns.values[-6:]

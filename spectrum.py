@@ -185,8 +185,8 @@ if __name__ == '__main__':
                 realParameters = dfi.values[0][-7:-1]
                 star = dfi.values[0][-1]
                 spectrum = Spectrum(wavelength, flux, star)
-                spectrum.clean()
-                spectrum.normalize('constant')
+                # TODO: Either (or both) .clean or .normalize will "destroy" the
+                #       spectrum so parameters cannot be obtained
                 spectrum.set_model('FASMA_ML.pkl')
                 spectrum.new_grid = True
                 p = spectrum.get_parameters()
