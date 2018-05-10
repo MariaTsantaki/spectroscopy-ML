@@ -51,10 +51,7 @@ def train(clf, save=True, plot=True):
     if not os.path.isfile('combined_spec.csv'):
         create_combined()
     df = pd.read_csv('combined_spec.csv', index_col=0)
-    # hdulist = fits.open('combined.fits')
-    # df = pd.DataFrame(hdulist[0].data)
     df.set_index('spectrum', inplace=True)
-    # print(df.head())
     xlabel = df.columns.values[:-6]
     ylabel = df.columns.values[-6:]
     X = df.loc[:, xlabel]
