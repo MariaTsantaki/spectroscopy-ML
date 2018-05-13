@@ -1,3 +1,4 @@
+import numpy as np
 from scipy.interpolate import interp1d
 import matplotlib.pyplot as plt
 try:
@@ -17,7 +18,7 @@ plt.rcParams['ytick.major.width'] = 2
 
 
 
-
+# TODO: Fix this!
 class _Normalize:
 
     def __init__(self, wavelength, flux, kind='linear', degree=2):
@@ -61,7 +62,7 @@ class _Normalize:
         idx = (range[0] <= self.wavelength) & (self.wavelength <= range[1])
         if not idx.any():
             return np.nan
-        return np.mean(flux[idx])
+        return np.mean(self.flux[idx])
 
 
 class Spectrum:
@@ -81,7 +82,7 @@ class Spectrum:
         """Remove cosmic rays from the spectrum"""
         data = self.flux
         med = np.median(self.flux)
-        self.flux[self.flux == 0] = med
+        self.flux[self.flux <= 0] = med
         med = np.median(self.flux)
         sigma = np.mean(np.absolute(self.flux - np.mean(self.flux, None)), None)
         self.flux[self.flux > (med + sigma*5)] = med
@@ -113,11 +114,20 @@ class Spectrum:
         self.wavelength = w
         self.new_grid = True
 
-    def set_model(self, fname):
+    def set_model(self, fname, percentage=1):
         with open(fname, 'rb') as f:
             print('Loading model...')
             self.model = cPickle.load(f)
             print('Model succesfully loaded.')
+            if percentage < 1:
+                print('Removing high coefficients from the model...')
+                for i, pi in enumerate(self.model.coef_):
+                    idx = abs(pi) <= percentage * max(abs(pi))
+                    pi[~idx] = 0
+                    self.model.coef_[i] = pi
+                # idx = self.flux < percentage * max(self.flux)
+                # self.model.coef_[:, ~idx] = 0
+            print('Model ready to use. Percentage: {}%'.format(percentage*100))
             self.model_set = True
 
     def get_parameters(self):
@@ -126,6 +136,7 @@ class Spectrum:
         if not self.new_grid:
             raise ValueError('''Please put the spectrum on the same grid as the model. If it already is, then use: "spectrum.new_grid = True" before this method call''')
         self.parameters = self.model.predict(self.flux.reshape(1, -1))[0]
+        # self.parameters = np.dot(self.model.coef_, self.flux) + self.model.intercept_
         self.parameters[0] = int(self.parameters[0])
         self.parameters[1] = round(self.parameters[1], 2)
         self.parameters[2] = round(self.parameters[2], 2)
@@ -147,7 +158,7 @@ class Spectrum:
 
     def plot(self, save=False):
         plt.plot(self.wavelength, self.flux)
-        plt.xlabel(r'Wavelength [$\AA\]')
+        plt.xlabel(r'Wavelength [$\AA]')
         plt.ylabel('Normalized flux')
         plt.title('Star: {}'.format(self.star))
 
@@ -159,8 +170,6 @@ class Spectrum:
             text = '{}: {}'.format(name, value)
             plt.text(x0, y, text)
             y -= 0.03
-
-
         plt.tight_layout()
         if save:
             plt.savefig('figures/{}.pdf'.format(self.star))
@@ -177,7 +186,7 @@ if __name__ == '__main__':
     from generate_test_spectrum import generate
     if len(sys.argv) > 1:
         if sys.argv[1] == 'real':
-            df = pd.read_csv('combined_spec.csv')
+            df = pd.read_hdf('combined_spec.hdf')
             wavelength = np.array(list(map(float, df.keys()[:-7])))
             while True:
                 dfi = df.sample(1)
@@ -187,11 +196,13 @@ if __name__ == '__main__':
                 spectrum = Spectrum(wavelength, flux, star)
                 # TODO: Either (or both) .clean or .normalize will "destroy" the
                 #       spectrum so parameters cannot be obtained
-                spectrum.set_model('FASMA_ML.pkl')
+                spectrum.clean()
+                spectrum.normalize('constant')
+                spectrum.set_model('FASMA_ML.pkl', percentage=0.01)
                 spectrum.new_grid = True
                 p = spectrum.get_parameters()
                 for p1, p2 in zip(p, realParameters):
-                    print(p1-p2)
+                    print('{}\t{}'.format(p1, p2))
                 # spectrum.print_parameters()
                 # print('Real parameters:', realParameters)
                 spectrum.plot()
