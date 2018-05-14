@@ -114,7 +114,7 @@ def train(clf, model, save=True, cutoff=0.9999, percent=50, plot=True, scale=Fal
         print('Mean absolute error for {}: {:.2f}'.format(label, score))
         if plot:
             plt.figure()
-            plt.plot(y_test[label], y_test[label].values - y_pred[:, i], 'o')
+            plt.scatter(y_test[label], y_test[label].values - y_pred[:, i], s=70, alpha=0.4)
             plt.grid()
             plt.title(label)
             plt.savefig(label + '_' + model + '.png')
@@ -182,11 +182,11 @@ def test_set(clf, model, continuum=None, scale=False):
     d = [spec, params[:, 0], params[:, 1], params[:, 2], params[:, 3]]
     d = np.array(d)
     spec = list(map(lambda x: x.split('/')[-1], spec))
-    d = {'specname': spec, 'teff': params[:, 0], 'logg': params[:, 1], '[M/H]': params[:, 2], 'alpha': params[:, 3]}
+    d = {'specname': spec, 'teff': params[:, 0], 'logg': params[:, 1], 'metal': params[:, 2], 'alpha': params[:, 3]}
 
-    save_and_compare_synthetic(d, model)
+    results = save_and_compare_synthetic(d, model)
     #save_and_compare_apogee(d)
-    return
+    return results
 
 
 def lasso(alpha):
@@ -198,10 +198,10 @@ def lasso(alpha):
 
 def ridge(alpha, cutoff=0.9999, percent=50):
     clf = linear_model.Ridge(alpha=[alpha])
-    model = 'ridge_0.01_' + str(percent)
+    model = 'ridge_' + str(alpha) + '_' + str(percent)
     clf, continuum = train(clf, model, save=True, cutoff=0.9999, percent=percent, plot=True, scale=False)
-    test_set(clf, model, continuum)
-    return
+    results = test_set(clf, model, continuum)
+    return results
 
 if __name__ == '__main__':
 
@@ -215,7 +215,6 @@ if __name__ == '__main__':
     #    #print(clf)
     #    test_set(clf, mod, continuum=continuum)
 
-    alpha = [0.0001, 0.001, 0.01, 0.1, 1, 10]
-    alpha = [50, 40, 30, 20]
+    alpha = [0.01, 0.1]
     for a in alpha:
-        ridge(0.01, cutoff=0.9999, percent=a)
+        results = ridge(a, cutoff=0.9999, percent=50)
