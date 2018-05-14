@@ -36,13 +36,15 @@ def validation():
     df = pd.read_csv('combined_spec.csv', index_col=0)
     df.set_index('spectrum', inplace=True)
     xlabel = df.columns.values[:-7]
-    ylabel = df.columns.values[-7:-1]
+    ylabel = df.columns.values[-7:-3]
     X = df.loc[:, xlabel]
     y = df.loc[:, ylabel]
 
-    param_range = np.linspace(0.0001, 0.01, 5)
+    param_range = [0.0001, 0.001, 0.01]
+    #linear_model.RidgeCV(alphas=[0.01, 0.1, 1.0, 10.0, 100.0, 1000.0])
+    #linear_model.Ridge(alpha=[0.001])
 
-    train_scores, test_scores = validation_curve(linear_model.Lasso(), X, y, param_name="alpha", param_range=param_range, scoring="accuracy", n_jobs=-1)
+    train_scores, test_scores = validation_curve(linear_model.Ridge(), X, y, param_name="alpha", param_range=param_range, scoring="accuracy", n_jobs=-1)
     train_scores_mean = np.mean(train_scores, axis=1)
     train_scores_std = np.std(train_scores, axis=1)
     test_scores_mean = np.mean(test_scores, axis=1)
@@ -67,18 +69,29 @@ def validation():
     plt.show()
 
 
-def train(clf, mod, save=True, plot=True, scale=True):
-
+def train(clf, model, save=True, cutoff=0.9999, percent=50, plot=True, scale=False):
+    # Model just for saving options
     if not os.path.isfile('combined_spec.csv'):
         create_combined()
 
     df = pd.read_csv('combined_spec.csv', index_col=0)
     df.set_index('spectrum', inplace=True)
     xlabel = df.columns.values[:-7]
-    ylabel = df.columns.values[-7:-1]
+    ylabel = df.columns.values[-7:-3]
     X = df.loc[:, xlabel]
     y = df.loc[:, ylabel]
 
+    # select continuum
+    continuum = []
+    for xlab in xlabel[:]:
+        flux = X[xlab]
+        flux_cont = flux.loc[flux > cutoff]
+        if (len(flux_cont)/len(flux))*100 > percent:
+            continuum.append(xlab)
+
+    columns = np.array(continuum)
+    X.drop(columns, inplace=True, axis=1)
+    print('The number of flux points is %s from the original %s.' % (len(xlabel)-len(continuum), len(xlabel)))
     if scale:
         #Is this ok?
         X = preprocessing.robust_scale(X)
@@ -104,13 +117,13 @@ def train(clf, mod, save=True, plot=True, scale=True):
             plt.plot(y_test[label], y_test[label].values - y_pred[:, i], 'o')
             plt.grid()
             plt.title(label)
-            plt.savefig(label + '_' + mod + '.png')
+            plt.savefig(label + '_' + model + '.png')
             plt.show()
 
     if save:
         with open('FASMA_ML.pkl', 'wb') as f:
             cPickle.dump(clf, f)
-    return clf
+    return clf, continuum
 
 
 def train_models(mod):
@@ -119,7 +132,7 @@ def train_models(mod):
     if mod == 'linear':
         clf = linear_model.LinearRegression(n_jobs=-1)
     elif mod == 'lasso':
-        clf = linear_model.Lasso(alpha=0.001, max_iter=5000, normalize=True)
+        clf = linear_model.Lasso(alpha=0.001, max_iter=10000, tol=0.001, normalize=True, positive=True)
     elif mod == 'lassolars':
         clf = linear_model.LassoLars(alpha=0.001)
     elif mod == 'multilasso':
@@ -127,7 +140,7 @@ def train_models(mod):
     elif mod == 'ridgeCV':
         clf = linear_model.RidgeCV(alphas=[0.01, 0.1, 1.0, 10.0, 100.0, 1000.0])
     elif mod == 'ridge':
-        clf = linear_model.Ridge(alpha=[0.01])
+        clf = linear_model.Ridge(alpha=[0.001])
     elif mod == 'bayes':
         clf = linear_model.BayesianRidge()
     elif mod == 'huber':
@@ -135,22 +148,27 @@ def train_models(mod):
     elif mod == 'poly':
         clf = poly_clf()
 
-    clf = train(clf, mod, save=True, plot=True)
-    return clf
+    clf, continuum = train(clf, mod, save=True, plot=True)
+    return clf, continuum
 
 
-def test_set(clf, model, scale=True):
+def test_set(clf, model, continuum=None, scale=False):
 
+    #here model is just for saving the plot files
     spec = np.genfromtxt('obs_synth.lst', dtype='str')
     params = []
     for s in spec:
-
-        x = prepare_spectrum(s)
+        x = prepare_spectrum(s, continuum)
         if scale:
             x = preprocessing.robust_scale(x)
 
         p = clf.predict(x)[0]
         params.append(p)
+        #plt.plot(clf.coef_[0], x[0], 'o')
+        #plt.show()
+
+        #teff = np.dot(clf.coef_[0], x[0]) + clf.intercept_[0]
+        #print('teff', teff)
         #print('Star: %s' % s)
         #print('\nStellar atmospheric parameters:')
         #print('Teff:   {:.0f} K'.format(p[0]))
@@ -178,18 +196,26 @@ def lasso(alpha):
     return
 
 
-def ridge(alpha):
+def ridge(alpha, cutoff=0.9999, percent=50):
+    clf = linear_model.Ridge(alpha=[alpha])
+    model = 'ridge_0.01_' + str(percent)
+    clf, continuum = train(clf, model, save=True, cutoff=0.9999, percent=percent, plot=True, scale=False)
+    test_set(clf, model, continuum)
     return
 
 if __name__ == '__main__':
 
-    models = ['linear']
+    models = ['ridge']
     #models = ['linear', 'lasso', 'multilasso', 'lassolars', 'ridge', 'ridgeCV', 'bayes', 'huber', 'poly']
-    validation()
+    #validation()
     #for mod in models:
-    #    clf = train_models(mod)
-    #    test_set(clf, mod)
+    #    clf, continuum = train_models(mod)
+    #    #with open('FASMA_ML.pkl', 'rb') as f:
+    #    #    clf = cPickle.load(f)
+    #    #print(clf)
+    #    test_set(clf, mod, continuum=continuum)
 
-    #alpha = [0.00001, 0.0001, 0.001]
-    #for a in alpha:
-    #    lasso(a)
+    alpha = [0.0001, 0.001, 0.01, 0.1, 1, 10]
+    alpha = [50, 40, 30, 20]
+    for a in alpha:
+        ridge(0.01, cutoff=0.9999, percent=a)
