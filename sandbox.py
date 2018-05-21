@@ -1,8 +1,7 @@
 import pandas as pd
 import numpy as np
 import _pickle as cPickle
-from sklearn import svm
-from sklearn import linear_model
+from sklearn import linear_model, preprocessing
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 from time import time
@@ -35,8 +34,9 @@ def generateLabelVector(p):
     return v.reshape(1, -1)
 
 
-def getSpectrum(clf, labelVector):
-    f = clf.predict(labelVector)[0]
+def getSpectrum(clf, scaler, p):
+    labelVector = generateLabelVector(p)
+    f = clf.predict(scaler.transform(labelVector))[0]
     return f
 
 
@@ -45,10 +45,11 @@ if __name__ == '__main__':
     wavelength = np.array(list(map(float, y.columns.values)))
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33)
     clf = linear_model.LinearRegression(n_jobs=-1)
-    clf.fit(X_train, y_train)
+    scaler = preprocessing.StandardScaler().fit(X_train)
+    clf.fit(scaler.transform(X_train), y_train)
 
     i = randint(0, len(X_test)-1)
-    f_predict = clf.predict(X_test.iloc[i].values.reshape(1, -1))[0]
+    f_predict = clf.predict(scaler.transform(X_test.iloc[i].values.reshape(1, -1)))[0]
     f_test = y_test.iloc[i].values
 
     plt.figure(figsize=(12, 6))
@@ -56,6 +57,7 @@ if __name__ == '__main__':
     ax1.plot(wavelength, f_test, label='Synthetic')
     ax1.plot(wavelength, f_predict, label='ML predict')
     ax1.set_xlim(15700, 15900)
+    ax1.set_title('Test vs. prediction')
     plt.legend(frameon=False)
     plt.ylabel('Flux')
     plt.subplot(212, sharex=ax1)
@@ -65,11 +67,14 @@ if __name__ == '__main__':
     plt.tight_layout()
 
     plt.figure(figsize=(12, 6))
-    plt.plot(wavelength, getSpectrum(clf, generateLabelVector((5777, 4.44, 0.0))), label='Sun: [Fe/H]=0.00')
-    plt.plot(wavelength, getSpectrum(clf, generateLabelVector((5777, 4.44, -1.0))), label='Sun: [Fe/H]=-1.00')
-    plt.plot(wavelength, getSpectrum(clf, generateLabelVector((5777, 4.44, -2.0))), label='Sun: [Fe/H]=-2.00')
+    f1 = getSpectrum(clf, scaler, (5777, 4.44, 0.0))
+    f2 = getSpectrum(clf, scaler, (5777, 4.44, -1.0))
+    f3 = getSpectrum(clf, scaler, (5777, 4.44, -2.0))
+    plt.plot(wavelength, f1, label='Sun: [Fe/H]=0.00')
+    plt.plot(wavelength, f2, label='Sun: [Fe/H]=-1.00')
+    plt.plot(wavelength, f3, label='Sun: [Fe/H]=-2.00')
     plt.xlim(15700, 15800)
-    plt.legend(frameon=False)
+    plt.legend(frameon=False, loc='best')
 
 
     plt.show()
