@@ -14,8 +14,9 @@ class Minimizer:
         self.model = model
         self.p0 = p0
 
-    def minimize(self, max_iter=1000, tol=0.01):
-        res = minimize(self.chi2, self.p0)
+    def minimize(self, method=None):
+        self.method = method
+        res = minimize(self.chi2, self.p0, method=method)
         return res
 
     def chi2(self, p, error=1):
@@ -32,7 +33,7 @@ if __name__ == '__main__':
 
     t = time()
     minimizer = Minimizer(flux, model)
-    res = minimizer.minimize()
+    res = minimizer.minimize(method='Nelder-Mead')
     print('Minimized in {}s\n'.format(round(time()-t, 2)))
 
     print('#'*30)
@@ -43,7 +44,7 @@ if __name__ == '__main__':
     print('[Fe/H](real) {}dex'.format(result['feh']))
     print('[Fe/H](min) {}dex'.format(round(res.x[2], 2)))
 
-    if joblib_import:
+    if joblib_import and False:
         print('\n\nComparing running on multiple cores')
         N = int(len(data.y_test)/10)
         def f(i):
