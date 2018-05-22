@@ -1,6 +1,7 @@
 from model_training import Data, Model
 from scipy.optimize import minimize
 import numpy as np
+import matplotlib.pyplot as plt
 from time import time
 try:
     from joblib import Parallel, delayed
@@ -16,18 +17,38 @@ class Minimizer:
 
     def minimize(self, method=None):
         self.method = method
-        res = minimize(self.chi2, self.p0, method=method)
-        return res
+        self.res = minimize(self.chi2, self.p0, method=method)
+        return self.res
 
     def chi2(self, p, error=1):
         h = self.model.get_spectrum(p)
         return np.sum((self.flux - h)**2) / error
 
+    def plot(self, save=False, fname=None):
+        flux0 = self.model.get_spectrum(self.p0)
+        flux_res = self.model.get_spectrum(self.res.x)
+        plt.figure(figsize=(12, 8))
+        plt.plot(wavelength, self.flux, label='Observation')
+        plt.plot(wavelength, flux0, label='Initial guess', alpha=0.4)
+        plt.plot(wavelength, flux_res, label='Final result')
+        plt.plot(wavelength, flux-flux_res + 1.1, alpha=0.7, label='Difference')
+        plt.xlabel('Wavelength')
+        plt.ylabel('Flux')
+        plt.legend(loc='best', frameon=False)
+        plt.tight_layout()
+        plt.grid(True)
+        if save:
+            if fname is None:
+                fname = 'result.pdf'
+            plt.savefig(fname)
+        plt.show()
+
+
 
 if __name__ == '__main__':
     data = Data('combined_spec.hdf')
     model = Model(data, classifier='linear', load=True)
-
+    wavelength = data.get_wavelength()
     result = data.X_test.iloc[0]
     flux = data.y_test.iloc[0]
 
@@ -43,6 +64,9 @@ if __name__ == '__main__':
     print('logg(min) {}dex'.format(round(res.x[1], 2)))
     print('[Fe/H](real) {}dex'.format(result['feh']))
     print('[Fe/H](min) {}dex'.format(round(res.x[2], 2)))
+
+    minimizer.plot()
+
 
     if joblib_import and False:
         print('\n\nComparing running on multiple cores')
