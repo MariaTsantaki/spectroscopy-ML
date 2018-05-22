@@ -7,9 +7,10 @@ import numpy as np
 import time
 import pandas as pd
 import matplotlib.pyplot as plt
+from mpfit import mpfit
+from sklearn import preprocessing
 
-
-def minimize_ML(clf, y_obs):
+def minimize_ML(clf, y_obs, scale=False):
     '''Minimize a synthetic spectrum to an observed
 
      Input
@@ -24,8 +25,6 @@ def minimize_ML(clf, y_obs):
      params : list
        Final parameters
     '''
-
-    from mpfit import mpfit
 
 
     def convergence_info(res, parinfo, dof):
@@ -67,28 +66,30 @@ def minimize_ML(clf, y_obs):
 
         x_red = round((res.fnorm / dof), 4)
         print('Iterations: %s' % res.niter)
-        print('Value of the summed squared residuals: %s' % res.fnorm)
+        #print('Value of the summed squared residuals: %s' % res.fnorm)
         print('Reduced chi squared: %s' % x_red)
-        print('Fitted parameters with uncertainties:')
+        #print('Fitted parameters with uncertainties:')
         # scaled uncertainties
         pcerror = res.perror * np.sqrt(res.fnorm / dof)
         teff  = round(float(res.params[0]), 0)
-        logg  = round(float(res.params[1]), 3)
+        logg  = round(float(res.params[1]), 2)
         feh   = round(float(res.params[2]), 3)
+        alpha = round(float(res.params[3]), 3)
         #vsini = round(float(res.params[5]), 1)
         #scaled error
         erteff  = round(float(res.perror[0]), 0)
-        erlogg  = round(float(res.perror[1]), 3)
+        erlogg  = round(float(res.perror[1]), 2)
         erfeh   = round(float(res.perror[2]), 3)
+        eralpha = round(float(res.perror[3]), 3)
         #ervsini = round(float(res.perror[5]), 1)
         # Save only the scaled error
-        parameters = [teff, logg, feh]
+        parameters = [teff, logg, feh, alpha]
         for i, x in enumerate(res.params):
                     print( "\t%s: %s +- %s (scaled error +- %s)" % (parinfo[i]['parname'], round(x, 3), round(res.perror[i], 3), round(pcerror[i], 3)))
         return parameters
 
 
-    def myfunct(p, y_obs=y_obs, y_obserr=0.1, clf=clf, fjac=None):
+    def myfunct(p, y_obs=y_obs, y_obserr=0.1, clf=clf, scale=scale, fjac=None):
         '''Function that return the weighted deviates (to be minimized).
 
         Input
@@ -104,38 +105,53 @@ def minimize_ML(clf, y_obs):
           Model deviation from observation
         '''
 
-        y = clf.predict(np.array(p).reshape(1, -1))
+        p = np.append(p, (p[0]**2, p[1]**2, p[2]**2, p[0]*p[1], p[0]*p[2], p[1]*p[2]))
+        if scale is True:
+            scaler = preprocessing.StandardScaler().fit(np.array(p).reshape(-1, 1))
+            p = scaler.transform(np.array(p).reshape(-1, 1))
+            y = clf.predict(np.array(p).reshape(1, -1))[0]
+        else:
+            y = clf.predict(np.array(p).reshape(1, -1))[0]
+        plt.plot(y, label='model')
+        plt.plot(y_obs, label='input')
+        plt.legend()
+        plt.show()
         # Error on the flux #needs corrections
         err = np.zeros(len(y_obs)) + y_obserr
         status = 0
         #Print parameters at each function call
         #print('    Teff:{:8.1f}   logg: {:1.2f}   [Fe/H]: {:1.2f}   vsini: {:1.2f}'.format(*p))
-        return([status, (y[0]-y_obs)/err])
+        return([status, (y-y_obs)/err])
 
 
     # Set PARINFO structure for all 4 free parameters for mpfit
     # Teff, logg, feh, vsini
-    # The limits are also cheched by the bounds function
-    teff_info  = {'parname':'Teff',   'limited': [1, 1], 'limits': [3000, 7000], 'step': 100,  'mpside': 2}
-    logg_info  = {'parname':'logg',   'limited': [1, 1], 'limits': [3.0, 5.0],   'step': 0.1,  'mpside': 2}
-    feh_info   = {'parname':'[Fe/H]', 'limited': [1, 1], 'limits': [-2.5, 0.6],  'step': 0.05, 'mpside': 2}
-    #vsini_info = {'parname':'vsini',  'limited': [1, 1], 'limits': [0.0, 90.0],  'step': 1.0,  'mpside': 2}
-    parinfo = [teff_info, logg_info, feh_info]
-    #parinfo = [teff_info, logg_info, feh_info, vsini_info]
+    teff_info  = {'parname':'Teff',   'limited': [1, 1], 'limits': [3000, 7000], 'step': 100,  'mpside': 2, 'mpprint': 0}
+    logg_info  = {'parname':'logg',   'limited': [1, 1], 'limits': [3.0, 5.0],   'step': 0.1,  'mpside': 2, 'mpprint': 0}
+    feh_info   = {'parname':'[M/H]',  'limited': [1, 1], 'limits': [-2.5, 0.6],  'step': 0.05, 'mpside': 2, 'mpprint': 0}
+    alpha_info = {'parname':'[a/Fe]', 'limited': [1, 1], 'limits': [-0.5, 0.5],  'step': 0.05, 'mpside': 2, 'mpprint': 0}
+    #vt_info    = {'parname':'vmic',  'limited': [1, 1], 'limits': [0.0, 9.9],   'step': 0.5,  'mpside': 2}
+    #vmac_info  = {'parname':'vmac',  'limited': [1, 1], 'limits': [0.0, 20.0],  'step': 0.5,  'mpside': 2}
+    #vsini_info = {'parname':'vsini', 'limited': [1, 1], 'limits': [0.0, 90.0],  'step': 1.0,  'mpside': 2}
+    parinfo = [teff_info, logg_info, feh_info, alpha_info]
 
-    # A dictionary which contains the parameters to be passed to the
-    # user-supplied function specified by myfunct via the standard Python
-    # keyword dictionary mechanism. This is the way you can pass additional
-    # data to your user-supplied function without using global variables.
-    yerr = 0.01 #arbitary value
-    fa = {'y_obs': y_obs, 'y_obserr': yerr, 'clf': clf}
-    p0 = [5777, 4.44, 0.0]
+    yerr = 1 #arbitary value
+    fa = {'y_obs': y_obs, 'y_obserr': yerr, 'clf': clf, 'scale': scale}
+    p0 = [5777, 4.44, 0.0, 0.0]
 
     # Minimization starts here.
     # Measure time
     start_time = time.time()
-    y = clf.predict(np.array(p0).reshape(1, -1))
-    m = mpfit(myfunct, xall=p0, parinfo=parinfo, ftol=1e-4, xtol=1e-4, gtol=1e-4, functkw=fa, maxiter=20)
+    m = mpfit(myfunct, xall=p0, parinfo=parinfo, ftol=1e-5, xtol=1e-5, gtol=1e-15, functkw=fa, maxiter=20, quiet=1)
     dof = len(y_obs) - len(m.params)
     parameters = convergence_info(m, parinfo, dof)
+
+    #plt.plot(y_obs, '-o', label='obs')
+    #p = np.append(p, (p[0]**2, p[1]**2, p[2]**2, p[0]*p[1], p[0]*p[2], p[1]*p[2]))
+    #y = clf.predict(np.array(p0).reshape(1, -1))[0]
+    #plt.plot(y, '-o', label='sun')
+    #y = clf.predict(np.array(parameters).reshape(1, -1))[0]
+    #plt.plot(y, '-o', label='result')
+    #plt.legend()
+    #plt.show()
     return parameters

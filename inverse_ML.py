@@ -18,43 +18,13 @@ try:
 except ImportError:
     import _pickle as cPickle
 
-from utils import create_combined, prepare_linelist, prepare_spectrum, save_and_compare_apogee, save_and_compare_synthetic, prepare_spectrum_synth
+from utils import create_combined, prepare_spectrum, save_and_compare_apogee, save_and_compare_synthetic, prepare_spectrum_synth
 from matplotlib import cm
-
-def getData(cutoff=0.9999, percent=50):
-    df = pd.read_csv('combined_spec.hdf', index_col=0)
-    df.set_index('spectrum', inplace=True)
-    ylabel = df.columns.values[:-7]
-    xlabel = df.columns.values[-7:]
-    X = df.loc[:, xlabel]
-    y = df.loc[:, ylabel]
-
-    # select continuum
-    continuum = []
-    for ylab in ylabel[:]:
-        flux = y[ylab]
-        flux_cont = flux.loc[flux > cutoff]
-        if (len(flux_cont)/len(flux))*100 > percent:
-            continuum.append(ylab)
-
-    columns = np.array(continuum)
-    y.drop(columns, inplace=True, axis=1)
-    return X, y
-
-
-def x2(y_ML, y_synth):
-    err = 1
-    chi2 = (y_ML-y_synth)**2/err
-    return chi2
-
 
 def poly_clf():
     polynomial_features = PolynomialFeatures(degree=2, interaction_only=True)
-    xpoly = polynomial_features.fit_transform(X)
     linear_regression = linear_model.LinearRegression()
     clf = make_pipeline(PolynomialFeatures(2), linear_model.LinearRegression())
-    #clf.fit(X[:, np.newaxis], y)
-    #y_pred = clf.predict(X_test[:, np.newaxis])
     return clf
 
 
@@ -65,15 +35,15 @@ def train(clf, model, save=True, cutoff=0.99, percent=50, plot=True, scale=False
 
     df = pd.read_csv('spec_ML.csv', index_col=0)
     df.set_index('spectrum', inplace=True)
-    xlabel = df.columns.values[-7:-4]
+    xlabel = df.columns.values[-7:-3]
     ylabel = df.columns.values[:-7]
     X = df.loc[:, xlabel]  #Parameters
-    #X['teff**2']   = X['teff'] ** 2
-    #X['logg**2']   = X['logg'] ** 2
-    #X['feh**2']    = X['feh'] ** 2
-    #X['teff*logg'] = X['teff'] * X['logg']
-    #X['teff*feh']  = X['teff'] * X['feh']
-    #X['logg*feh']  = X['logg'] * X['feh']
+    X['teff**2']   = X['teff'] ** 2
+    X['logg**2']   = X['logg'] ** 2
+    X['feh**2']    = X['feh'] ** 2
+    X['teff*logg'] = X['teff'] * X['logg']
+    X['teff*feh']  = X['teff'] * X['feh']
+    X['logg*feh']  = X['logg'] * X['feh']
     y = df.loc[:, ylabel] #Fluxes
 
     # select continuum
@@ -88,31 +58,29 @@ def train(clf, model, save=True, cutoff=0.99, percent=50, plot=True, scale=False
     y.drop(columns, inplace=True, axis=1)
     print('The percentage of flux points dropped is %s with a %s cutoff.' % (percent, cutoff))
     print('The number of flux points is %s from the original %s.' % (len(ylabel)-len(continuum), len(ylabel)))
+
+    if scale:
+        scaler = preprocessing.StandardScaler().fit(X)
+        X = scaler.transform(X)
     # Training of the data
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.10)
-    if scale:
-        #scaler = preprocessing.StandardScaler().fit(X_train)
-        scaler = preprocessing.RobustScaler()
-        y_train = scaler.fit_transform(y_train)
-        y_train = pd.DataFrame(y_train, columns=ylabel)
     clf = clf.fit(X_train, y_train)
-    print('Selected model: %s' % clf)
-    N = len(y_test)
+
+    # Make predictions
     t = time()
     x_pred = []
-    for y in y_test.values[:]:
-        p = minimize_ML(clf, y)
+    for i, y in enumerate(y_test.values[:]):
+        p = minimize_ML(clf, y, scale=scale)
         x_pred.append(p)
-
-    params = pd.DataFrame(np.array(x_pred), columns = xlabel)
+        print(X_test.values[i])
+    params = pd.DataFrame(np.array(x_pred), columns=xlabel)
+    print(params)
     t = time()-t
-    speedup = 60*N/t
-    print('Calculated parameters for {} stars in {:.2f}ms'.format(N, t*1e3))
-    #print('Speedup: {} million times'.format(int(speedup/1e6)))
+
+    print('Calculated parameters for {} stars in {:.2f}ms'.format(len(y_test), t*1e3))
     print('Test set score: {:.2f}'.format(clf.score(X_test, y_test)))
 
     for i, label in enumerate(xlabel):
-
         #score = mean_absolute_error(y_test[label], y_pred[:, i])
         #print('Mean absolute error for {}: {:.2f}'.format(label, score))
         if plot:
@@ -126,6 +94,7 @@ def train(clf, model, save=True, cutoff=0.99, percent=50, plot=True, scale=False
     if save:
         with open('FASMA_ML.pkl', 'wb') as f:
             cPickle.dump(clf, f)
+    print('Selected model: %s' % clf)
     return clf, continuum
 
 
@@ -134,7 +103,7 @@ def train_models(mod, save=True, cutoff=0.999, percent=50, plot=True, scale=Fals
     if mod == 'linear':
         clf = linear_model.LinearRegression(n_jobs=-1)
     elif mod == 'lasso':
-        clf = linear_model.Lasso(alpha=0.001, max_iter=10000, tol=0.001, normalize=True, positive=True)
+        clf = linear_model.Lasso(alpha=1000, max_iter=10000, tol=0.001, normalize=True, positive=True)
     elif mod == 'lassolars':
         clf = linear_model.LassoLars(alpha=0.001)
     elif mod == 'multilasso':
@@ -142,7 +111,7 @@ def train_models(mod, save=True, cutoff=0.999, percent=50, plot=True, scale=Fals
     elif mod == 'ridgeCV':
         clf = linear_model.RidgeCV(alphas=[0.01, 0.1, 1.0, 10.0])
     elif mod == 'ridge':
-        clf = linear_model.Ridge(alpha=[0.01])
+        clf = linear_model.Ridge(alpha=[1000])
     elif mod == 'bayes':
         clf = linear_model.BayesianRidge()
     elif mod == 'huber':
@@ -151,20 +120,19 @@ def train_models(mod, save=True, cutoff=0.999, percent=50, plot=True, scale=Fals
         #clf = poly_clf()
         clf = PolynomialFeatures(degree=2)
 
-    clf, continuum = train(clf, mod, save=True, cutoff=0.999, percent=50, plot=True, scale=False)
+    clf, continuum = train(clf, mod, save=save, cutoff=cutoff, percent=percent, plot=plot, scale=scale)
     return clf, continuum
 
 
-def test_set(clf, model, continuum=None, fname='obs_synth.lst', mode='synth'):
+def test_set(clf, model, continuum=None, fname='obs_synth.lst', scale=False, mode='synth'):
 
     #here model is just for saving the plot files
     spec = np.genfromtxt(fname, dtype='str')
     params = []
     if mode == 'synth':
         for s in spec[:]:
-            x, w = prepare_spectrum_synth(s, continuum)
-
-            p = clf.predict(x)[0]
+            y, w = prepare_spectrum_synth(s, continuum)
+            p = minimize_ML(clf, y[0], scale=False)
             params.append(p)
             #print('Star: %s' % s)
             #print('\nStellar atmospheric parameters:')
@@ -195,8 +163,8 @@ def test_set(clf, model, continuum=None, fname='obs_synth.lst', mode='synth'):
 
     elif mode == 'apogee':
         for s in spec[:]:
-            x, w = prepare_spectrum(s, continuum)
-            p = clf.predict(x)[0]
+            y, w = prepare_spectrum(s, continuum)
+            p = minimize_ML(clf, y[0], scale=False)
             params.append(p)
 
             #print('Star: %s' % s)
@@ -233,24 +201,6 @@ def test_set(clf, model, continuum=None, fname='obs_synth.lst', mode='synth'):
     return results
 
 
-def lasso(alpha):
-    clf = linear_model.Lasso(alpha=alpha, max_iter=10000, normalize=True)
-    mod = 'lasso_' + str(alpha)
-    train(clf, mod)
-    return
-
-
-def ridge(alpha, cutoff=0.999, percent=50, fname='obs_synth.lst'):
-    clf = linear_model.Ridge(alpha=[alpha])
-    #clf = linear_model.RidgeCV(alphas=[0.01, 0.1, 1.0])
-    model = 'ridge_' + str(alpha) + '_' + str(percent)
-    clf, continuum = train(clf, model, save=True, cutoff=cutoff, percent=percent, plot=False, scale=False)
-    #results = test_set(clf, model, continuum, fname=fname, mode='synth')
-    #results = test_set(clf, model, continuum, fname='obs.lst', mode='apogee')
-    results = []
-    return results
-
-
 def ridge_all(alpha, cutoff=0.999, percent=50, fname_synth='obs_synth300.lst', fname_obs='obs.lst'):
     clf = linear_model.Ridge(alpha=[alpha])
     #clf = linear_model.RidgeCV(alphas=[0.01, 0.1, 1.0])
@@ -264,75 +214,6 @@ def ridge_all(alpha, cutoff=0.999, percent=50, fname_synth='obs_synth300.lst', f
     return
 
 
-def ridge_snrtest():
-
-    snrfile = ['obs_synth100.lst', 'obs_synth200.lst', 'obs_synth300.lst', 'obs_synth400.lst', 'obs_synth500.lst']
-    results = []
-    #for a in alpha:
-    for snr in snrfile:
-        r = ridge(0.1, cutoff=0.9999, percent=50, fname=snr)
-        results.append(r)
-    results = np.array(results)
-    r = results.reshape(len(results), 16)
-    np.savetxt('results_ML.dat', r, fmt='%s', delimiter='\t')
-
-    label = ['teff', 'logg', 'metal', 'alpha']
-    x = [100, 200, 300, 400, 500]
-    plt.figure()
-    axes = plt.gca()
-    axes.set_xlim([50, 550])
-    plt.errorbar(x, r[:, 0], yerr=r[:, 2], fmt='o', alpha=0.5, color='green', label='mean')
-    plt.errorbar(x, r[:, 1], yerr=r[:, 3], fmt='o', alpha=0.5, color='blue', label='median')
-    plt.xlabel(r'SNR')
-    plt.legend(frameon=False, numpoints=1)
-    plt.grid(True)
-    #plt.savefig('teff_ridge_0.1_50_snr.png')
-    plt.show()
-
-    plt.figure()
-    axes = plt.gca()
-    axes.set_xlim([50, 550])
-    plt.errorbar(x, r[:, 4], yerr=r[:, 6], fmt='o', alpha=0.5, color='green', label='mean')
-    plt.errorbar(x, r[:, 5], yerr=r[:, 7], fmt='o', alpha=0.5, color='blue', label='median')
-    plt.xlabel(r'SNR')
-    plt.legend(frameon=False, numpoints=1)
-    plt.grid(True)
-    #plt.savefig('logg_ridge_0.1_50_snr.png')
-    plt.show()
-
-    plt.figure()
-    axes = plt.gca()
-    axes.set_xlim([50, 550])
-    plt.errorbar(x, r[:, 8], yerr=r[:, 10], fmt='o', alpha=0.5, color='green', label='mean')
-    plt.errorbar(x, r[:, 9], yerr=r[:, 11], fmt='o', alpha=0.5, color='blue', label='median')
-    plt.xlabel(r'SNR')
-    plt.legend(frameon=False, numpoints=1)
-    plt.grid(True)
-    #plt.savefig('metal_ridge_0.1_50_snr.png')
-    plt.show()
-
-    plt.figure()
-    axes = plt.gca()
-    axes.set_xlim([50, 550])
-    plt.errorbar(x, r[:, 12], yerr=r[:, 14], fmt='o', alpha=0.5, color='green', label='mean')
-    plt.errorbar(x, r[:, 13], yerr=r[:, 15], fmt='o', alpha=0.5, color='blue', label='median')
-    plt.xlabel(r'SNR')
-    plt.legend(frameon=False, numpoints=1)
-    plt.grid(True)
-    #plt.savefig('alpha_ridge_0.1_50_snr.png')
-    plt.show()
-
-
-def getData():
-    df = pd.read_csv('combined_spec.csv', index_col=0)
-    df.set_index('spectrum', inplace=True)
-    xlabel = df.columns.values[:-7]
-    ylabel = df.columns.values[-7:]
-    y = df.loc[:, xlabel]
-    X = df.loc[:, ylabel]
-    return X, y
-
-
 if __name__ == '__main__':
 
 
@@ -340,11 +221,12 @@ if __name__ == '__main__':
     models = ['linear']
     #validation()
     for mod in models:
-        clf, continuum = train_models(mod, save=True, cutoff=0.999, percent=40, plot=True, scale=False)
-    #    #with open('FASMA_ML.pkl', 'rb') as f:
-    #    #    clf = cPickle.load(f)
-    #    #print(clf)
-    #    results = test_set(clf, mod, continuum=continuum, fname='obs.lst', scale=False, mode='apogee')
+        clf, continuum = train_models(mod, save=True, cutoff=0.995, percent=40, plot=True, scale=True)
+        #with open('FASMA_ML.pkl', 'rb') as f:
+        #    clf = cPickle.load(f)
+        #print(clf)
+        #results = test_set(clf, mod, continuum=continuum, fname='obs_synth300.lst', scale=False, mode='synth')
+        #results = test_set(clf, mod, continuum=continuum, fname='obs.lst', scale=False, mode='apogee')
 
     #r = ridge_all(1000, cutoff=0.999, percent=40, fname_synth='obs_synth300.lst', fname_obs='obs.lst')
     #r = ridge(0.1, cutoff=0.999, percent=40, fname='obs.lst')
