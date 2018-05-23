@@ -63,15 +63,16 @@ class Minimizer:
 
 
 if __name__ == '__main__':
-    data = Data('combined_spec.hdf')
-    model = Model(data, classifier='linear', load=True)
+    data = Data('spec_ml.hdf')
+    model = Model(data, classifier='ridgeCV', load=True, fname='FASMA_large_ML.pkl')
+    # model = Model(data, classifier='ridgeCV', save=True, fname='FASMA_large_ML.pkl')
     wavelength = data.get_wavelength()
     result = data.X_test.iloc[0]
     flux = data.y_test.iloc[0]
 
     t = time()
     minimizer = Minimizer(flux, model)
-    res = minimizer.minimize(method='Nelder-Mead')
+    res = minimizer.minimize()
     print('Minimized in {}s\n'.format(round(time()-t, 2)))
 
     print('#'*30)
