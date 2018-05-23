@@ -34,7 +34,7 @@ class Data:
         wavelength = np.array(list(map(float, self.y.columns.values)))
         return wavelength
 
-    def _prepare_data(self):
+    def _prepare_data(self, cutoff=0.995, percent=40):
         xlabel = ['teff', 'logg', 'feh', 'alpha']
         ylabel = self.df.columns.values[:-7]
         self.X = self.df.loc[:, xlabel]
@@ -44,10 +44,11 @@ class Data:
         for ylab in ylabel[:]:
             flux = self.y[ylab]
             flux_cont = flux.loc[flux > cutoff]
-            if (len(flux_cont)/len(flux))*100 > percent:
+            if (float(len(flux_cont))/float(len(flux)))*100 > percent:
                 continuum.append(ylab)
         columns = np.array(continuum)
         self.y.drop(columns, inplace=True, axis=1)
+        print('The percentage of flux points dropped is %s with a %s cutoff.' % (percent, cutoff))
         print('The number of flux points is %s from the original %s.' % (len(ylabel)-len(continuum), len(ylabel)))
 
         if self.with_quadratic_terms:
