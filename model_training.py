@@ -1,3 +1,4 @@
+from __future__ import division
 import pandas as pd
 import numpy as np
 from sklearn import linear_model, preprocessing
@@ -54,7 +55,7 @@ class Data:
         for wavelength in self.ylabel[:]:
             flux = self.y[wavelength]
             flux_cont = flux.loc[flux > cutoff]
-            if (float(len(flux_cont))/float(len(flux)))*100 > percent:
+            if (len(flux_cont)/len(flux))*100 > percent:
                 continuum.append(wavelength)
         columns = np.array(continuum)
         self.y.drop(columns, inplace=True, axis=1)
