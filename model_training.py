@@ -1,10 +1,13 @@
 import pandas as pd
 import numpy as np
-import _pickle as cPickle
 from sklearn import linear_model, preprocessing
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 from time import time
+try:
+    import cPickle
+except ImportError:
+    import _pickle as cPickle
 
 
 class Data:
