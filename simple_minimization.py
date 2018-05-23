@@ -9,6 +9,15 @@ try:
 except ImportError:
     joblib_import = False
 
+plt.rcParams['xtick.direction'] = 'in'
+plt.rcParams['ytick.direction'] = 'in'
+plt.rcParams['axes.spines.right'] = False
+plt.rcParams['axes.spines.top'] = False
+plt.rcParams['axes.linewidth'] = 2
+plt.rcParams['xtick.major.width'] = 2
+plt.rcParams['ytick.major.width'] = 2
+
+
 class Minimizer:
     def __init__(self, flux, model, p0=(5777, 4.44, 0.00)):
         self.flux = flux
