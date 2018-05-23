@@ -54,7 +54,7 @@ class Data:
         for wavelength in self.ylabel[:]:
             flux = self.y[wavelength]
             flux_cont = flux.loc[flux > cutoff]
-            if (len(flux_cont)/len(flux))*100 > percent:
+            if (float(len(flux_cont))/float(len(flux)))*100 > percent:
                 continuum.append(wavelength)
         columns = np.array(continuum)
         self.y.drop(columns, inplace=True, axis=1)
@@ -128,7 +128,7 @@ class Model:
 
 if __name__ == '__main__':
     data = Data('spec_ML.csv')
-    data.flux_removal(cutoff=0.997, percent=42)
+    data.flux_removal(cutoff=0.999, percent=50)
     model = Model(data, classifier='linear')
     wavelength = data.get_wavelength()
     flux = model.get_spectrum((6320, 3.42, -0.45, 0.05))
