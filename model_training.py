@@ -35,21 +35,10 @@ class Data:
         return wavelength
 
     def _prepare_data(self, cutoff=0.995, percent=40):
-        xlabel = ['teff', 'logg', 'feh', 'alpha']
-        ylabel = self.df.columns.values[:-7]
-        self.X = self.df.loc[:, xlabel]
-        self.y = self.df.loc[:, ylabel]
-
-        continuum = []
-        for ylab in ylabel[:]:
-            flux = self.y[ylab]
-            flux_cont = flux.loc[flux > cutoff]
-            if (float(len(flux_cont))/float(len(flux)))*100 > percent:
-                continuum.append(ylab)
-        columns = np.array(continuum)
-        self.y.drop(columns, inplace=True, axis=1)
-        print('The percentage of flux points dropped is %s with a %s cutoff.' % (percent, cutoff))
-        print('The number of flux points is %s from the original %s.' % (len(ylabel)-len(continuum), len(ylabel)))
+        self.xlabel = ['teff', 'logg', 'feh', 'alpha']
+        self.ylabel = self.df.columns.values[:-7]
+        self.X = self.df.loc[:, self.xlabel]
+        self.y = self.df.loc[:, self.ylabel]
 
         if self.with_quadratic_terms:
             self.X['teff**2'] = self.X['teff'] ** 2
@@ -58,6 +47,18 @@ class Data:
             self.X['teff*logg'] = self.X['teff'] * self.X['logg']
             self.X['teff*feh'] = self.X['teff'] * self.X['feh']
             self.X['logg*feh'] = self.X['logg'] * self.X['feh']
+
+    def flux_removal(self, cutoff=0.995, percent=40):
+        print('The percentage of flux points dropped is %s% with a %s cutoff.' % (percent, cutoff))
+        continuum = []
+        for wavelength in self.ylabel[:]:
+            flux = self.y[wavelength]
+            flux_cont = flux.loc[flux > cutoff]
+            if (len(flux_cont)/len(flux))*100 > percent:
+                continuum.append(wavelength)
+        columns = np.array(continuum)
+        self.y.drop(columns, inplace=True, axis=1)
+        print('The number of flux points is %s from the original %s.' % (len(ylabel)-len(continuum), len(ylabel)))
 
     def split_data(self, test_size=0.10):
         self.X, self.X_test, self.y, self.y_test = train_test_split(self.X, self.y, test_size=test_size)
@@ -127,6 +128,7 @@ class Model:
 
 if __name__ == '__main__':
     data = Data('spec_ML.csv')
+    data.flux_removal(cutoff=0.997, percent=42)
     model = Model(data, classifier='linear')
     wavelength = data.get_wavelength()
     flux = model.get_spectrum((6320, 3.42, -0.45, 0.05))
