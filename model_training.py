@@ -33,7 +33,7 @@ class Data:
 
     def _prepare_data(self):
         xlabel = ['teff', 'logg', 'feh']
-        ylabel = self.df.columns.values[:-6]
+        ylabel = self.df.columns.values[:-7]
         self.X = self.df.loc[:, xlabel]
         self.y = self.df.loc[:, ylabel]
         if self.with_quadratic_terms:
