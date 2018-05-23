@@ -34,7 +34,7 @@ class Data:
         wavelength = np.array(list(map(float, self.y.columns.values)))
         return wavelength
 
-    def _prepare_data(self, cutoff=0.995, percent=40):
+    def _prepare_data(self):
         self.xlabel = ['teff', 'logg', 'feh', 'alpha']
         self.ylabel = self.df.columns.values[:-7]
         self.X = self.df.loc[:, self.xlabel]
