@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 from model_training import Data, Model
 from scipy.optimize import minimize
 import numpy as np

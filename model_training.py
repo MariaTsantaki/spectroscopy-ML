@@ -1,10 +1,13 @@
 import pandas as pd
 import numpy as np
-import _pickle as cPickle
 from sklearn import linear_model, preprocessing
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 from time import time
+try:
+    import cPickle
+except ImportError:
+    import _pickle as cPickle
 
 
 class Data:
@@ -18,7 +21,7 @@ class Data:
             reader = pd.read_hdf
         elif self.fname.endswith('.csv'):
             reader = pd.read_csv
-        self.df = reader(fname)
+        self.df = reader(fname, index_col=0)
         self.df.set_index('spectrum', inplace=True)
 
         self._prepare_data()
@@ -31,11 +34,23 @@ class Data:
         wavelength = np.array(list(map(float, self.y.columns.values)))
         return wavelength
 
-    def _prepare_data(self):
-        xlabel = ['teff', 'logg', 'feh']
+    def _prepare_data(self, cutoff=0.995, percent=40):
+        xlabel = ['teff', 'logg', 'feh', 'alpha']
         ylabel = self.df.columns.values[:-7]
         self.X = self.df.loc[:, xlabel]
         self.y = self.df.loc[:, ylabel]
+
+        continuum = []
+        for ylab in ylabel[:]:
+            flux = self.y[ylab]
+            flux_cont = flux.loc[flux > cutoff]
+            if (float(len(flux_cont))/float(len(flux)))*100 > percent:
+                continuum.append(ylab)
+        columns = np.array(continuum)
+        self.y.drop(columns, inplace=True, axis=1)
+        print('The percentage of flux points dropped is %s with a %s cutoff.' % (percent, cutoff))
+        print('The number of flux points is %s from the original %s.' % (len(ylabel)-len(continuum), len(ylabel)))
+
         if self.with_quadratic_terms:
             self.X['teff**2'] = self.X['teff'] ** 2
             self.X['logg**2'] = self.X['logg'] ** 2
@@ -44,7 +59,7 @@ class Data:
             self.X['teff*feh'] = self.X['teff'] * self.X['feh']
             self.X['logg*feh'] = self.X['logg'] * self.X['feh']
 
-    def split_data(self, test_size=0.44):
+    def split_data(self, test_size=0.10):
         self.X, self.X_test, self.y, self.y_test = train_test_split(self.X, self.y, test_size=test_size)
 
     def scale_data(self):
@@ -94,8 +109,8 @@ class Model:
                 cPickle.dump(self.clf, f)
 
     def _get_label_vector(self, p):
-        teff, logg, feh = p
-        v = [teff, logg, feh]
+        teff, logg, feh, alpha = p
+        v = [teff, logg, feh, alpha]
         if self.data.with_quadratic_terms:
             v += [teff**2, logg**2, feh**2, teff*logg, teff*feh, logg*feh]
         v = np.array(v).reshape(1, -1)
@@ -111,12 +126,10 @@ class Model:
 
 
 if __name__ == '__main__':
-    data = Data('combined_spec.hdf')
+    data = Data('spec_ML.csv')
     model = Model(data, classifier='linear')
-    # model = Model(data, save=False, load=True)
     wavelength = data.get_wavelength()
-    flux = model.get_spectrum((6320, 3.42, -0.45))
-
+    flux = model.get_spectrum((6320, 3.42, -0.45, 0.05))
     plt.figure(figsize=(12, 6))
     plt.plot(wavelength, flux)
     plt.show()
