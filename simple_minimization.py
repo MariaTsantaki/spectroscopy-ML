@@ -20,7 +20,7 @@ plt.rcParams['ytick.major.width'] = 2
 
 
 class Minimizer:
-    def __init__(self, flux, model, p0=(5777, 4.44, 0.00)):
+    def __init__(self, flux, model, p0=(5777, 4.44, 0.00, 0.0)):
         self.flux = flux
         self.model = model
         self.p0 = p0
@@ -83,6 +83,8 @@ if __name__ == '__main__':
     print('logg(min) {}dex'.format(round(res.x[1], 2)))
     print('[Fe/H](real) {}dex'.format(result['feh']))
     print('[Fe/H](min) {}dex'.format(round(res.x[2], 2)))
+    print('[a/Fe](real) {}dex'.format(result['alpha']))
+    print('[a/Fe](min) {}dex'.format(round(res.x[3], 2)))
 
     minimizer.plot()
 
