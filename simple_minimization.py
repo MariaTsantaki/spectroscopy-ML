@@ -27,6 +27,7 @@ class Minimizer:
     def minimize(self, method=None):
         self.method = method
         self.res = minimize(self.chi2, self.p0, method=method)
+        self.parameters = self.res.x
         return self.res
 
     def chi2(self, p, error=1):
@@ -46,6 +47,13 @@ class Minimizer:
         plt.legend(loc='best', frameon=False)
         plt.tight_layout()
         plt.grid(True)
+        x1, x2 = plt.xlim()
+        y1, y2 = plt.ylim()
+
+        plt.text(x2*0.98, y1*1.08, r'$T_\mathrm{eff}$=%sK' % int(self.parameters[0]))
+        plt.text(x2*0.98, y1*1.06, r'$\log g$={:.3}dex'.format(self.parameters[1]))
+        plt.text(x2*0.98, y1*1.04, '[Fe/H]={:.3}dex'.format(self.parameters[2]))
+
         if save:
             if fname is None:
                 fname = 'result.pdf'
