@@ -3,7 +3,6 @@ import pandas as pd
 from glob import glob
 from astropy.io import fits
 from observations import read_obs_intervals, read_observations, snr_apogee
-from synthetic import read_linelist
 import matplotlib.pyplot as plt
 import os
 from matplotlib import cm
