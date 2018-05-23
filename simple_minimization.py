@@ -19,7 +19,7 @@ plt.rcParams['ytick.major.width'] = 2
 
 
 class Minimizer:
-    def __init__(self, flux, model, p0=(5777, 4.44, 0.00)):
+    def __init__(self, flux, model, p0=(5777, 4.44, 0.00, 0.00)):
         self.flux = flux
         self.model = model
         self.p0 = p0
@@ -63,11 +63,11 @@ class Minimizer:
 
 
 if __name__ == '__main__':
-    data = Data('combined_spec.hdf')
+    data = Data('spec_ML.csv')
     model = Model(data, classifier='linear', load=True)
     wavelength = data.get_wavelength()
-    result = data.X_test.iloc[0]
-    flux = data.y_test.iloc[0]
+    result = data.X_test.iloc[2]
+    flux   = data.y_test.iloc[2]
 
     t = time()
     minimizer = Minimizer(flux, model)
@@ -81,6 +81,8 @@ if __name__ == '__main__':
     print('logg(min) {}dex'.format(round(res.x[1], 2)))
     print('[Fe/H](real) {}dex'.format(result['feh']))
     print('[Fe/H](min) {}dex'.format(round(res.x[2], 2)))
+    print('[a/Fe](real) {}dex'.format(result['alpha']))
+    print('[a/Fe](min) {}dex'.format(round(res.x[3], 2)))
 
     minimizer.plot()
 
