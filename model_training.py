@@ -5,6 +5,7 @@ from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 from time import time
 import pandas as pd
+from sklearn.feature_selection import SelectPercentile, f_classif
 try:
     import cPickle
 except ImportError:
@@ -30,7 +31,7 @@ class Data:
             self.split_data()
         if self.scale:
             self.scale_data()
-
+        #self.feature_selection()
         #X.data,y.data are the trained data, X_test and y_test are not scaled!
 
     def get_wavelength(self):
@@ -47,9 +48,13 @@ class Data:
             self.X['teff**2'] = self.X['teff'] ** 2
             self.X['logg**2'] = self.X['logg'] ** 2
             self.X['feh**2'] = self.X['feh'] ** 2
+            self.X['alpha**2'] = self.X['alpha'] ** 2
             self.X['teff*logg'] = self.X['teff'] * self.X['logg']
             self.X['teff*feh'] = self.X['teff'] * self.X['feh']
             self.X['logg*feh'] = self.X['logg'] * self.X['feh']
+            self.X['teff*alpha'] = self.X['teff'] * self.X['alpha']
+            self.X['alpha*feh'] = self.X['alpha'] * self.X['feh']
+            self.X['logg*alpha'] = self.X['logg'] * self.X['alpha']
 
     def flux_removal(self, cutoff=0.995, percent=40):
         print('The percentage of flux points dropped is %s with a %s cutoff.' % (percent, cutoff))
@@ -72,6 +77,12 @@ class Data:
         self.scaler = preprocessing.StandardScaler().fit(self.X)
         self.X = self.scaler.transform(self.X)
 
+    def feature_selection(self):
+        selector = SelectPercentile(f_classif, percentile=10)
+        selector.fit(self.X, self.y)
+        scores = -np.log10(selector.pvalues_)
+        scores /= scores.max()
+        print(scores)
 
 class Model:
     def __init__(self, data, classifier='linear', save=True, load=False, fname='FASMA_ML.pkl'):
@@ -85,15 +96,15 @@ class Model:
         if self.classifier == 'linear':
             self.clf = linear_model.LinearRegression(n_jobs=-1)
         elif self.classifier == 'lasso':
-            self.clf = linear_model.Lasso(alpha=0.001)
+            self.clf = linear_model.Lasso(alpha=0.00001)
         elif self.classifier == 'lassolars':
-            self.clf = linear_model.LassoLars(alpha=0.001)
+            self.clf = linear_model.LassoLars(alpha=1000)
         elif self.classifier == 'multilasso':
-            self.clf = linear_model.MultiTaskLasso(alpha=0.1)
+            self.clf = linear_model.MultiTaskLasso(alpha=1000)
         elif self.classifier == 'ridgeCV':
-            self.clf = linear_model.RidgeCV(alphas=[0.01, 0.1, 1.0, 10.0])
+            self.clf = linear_model.RidgeCV(alphas=[0.1, 1.0, 10.0, 100])
         elif self.classifier == 'ridge':
-            self.clf = linear_model.Ridge(alpha=0.01)
+            self.clf = linear_model.Ridge(alpha=10)
         elif self.classifier == 'bayes':
             self.clf = linear_model.BayesianRidge()
         elif self.classifier == 'huber':
@@ -118,7 +129,8 @@ class Model:
         teff, logg, feh, alpha = p
         v = [teff, logg, feh, alpha]
         if self.data.with_quadratic_terms:
-            v += [teff**2, logg**2, feh**2, teff*logg, teff*feh, logg*feh]
+            #v += [teff**2, logg**2, feh**2, alpha**2]
+            v += [teff**2, logg**2, feh**2, alpha**2, teff*logg, teff*feh, logg*feh, teff*alpha, alpha*feh, logg*alpha]
         v = np.array(v).reshape(1, -1)
         return v
 
@@ -131,7 +143,7 @@ class Model:
 
 
 if __name__ == '__main__':
-    data = Data('spec_ML.csv')
+    data = Data('spec_ml.hdf')
     continuum = data.flux_removal(cutoff=0.999, percent=50)
     model = Model(data, classifier='linear')
     wavelength = data.get_wavelength()
