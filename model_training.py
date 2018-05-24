@@ -50,7 +50,7 @@ class Data:
             self.X['logg*feh'] = self.X['logg'] * self.X['feh']
 
     def flux_removal(self, cutoff=0.995, percent=40):
-        print('The percentage of flux points dropped is %s% with a %s cutoff.' % (percent, cutoff))
+        print('The percentage of flux points dropped is %s with a %s cutoff.' % (percent, cutoff))
         continuum = []
         for wavelength in self.ylabel[:]:
             flux = self.y[wavelength]
@@ -59,7 +59,7 @@ class Data:
                 continuum.append(wavelength)
         columns = np.array(continuum)
         self.y.drop(columns, inplace=True, axis=1)
-        print('The number of flux points is %s from the original %s.' % (len(ylabel)-len(continuum), len(ylabel)))
+        print('The number of flux points is %s from the original %s.' % (len(self.ylabel)-len(continuum), len(self.ylabel)))
 
     def split_data(self, test_size=0.10):
         self.X, self.X_test, self.y, self.y_test = train_test_split(self.X, self.y, test_size=test_size)
@@ -70,7 +70,7 @@ class Data:
 
 
 class Model:
-    def __init__(self, data, classifier='linear', save=True, load=None, fname='FASMA_ML.pkl'):
+    def __init__(self, data, classifier='linear', save=True, load=False, fname='FASMA_ML.pkl'):
         self.classifier = classifier
         self.data = data
         self.save = save
@@ -96,7 +96,7 @@ class Model:
             self.clf = linear_model.HuberRegressor()
 
         # Train the classifier
-        if self.load is None:
+        if not self.load:
             t = time()
             self.train_classifier()
             print('Trained classifier in {}s'.format(round(time()-t, 2)))
@@ -126,13 +126,13 @@ class Model:
         return f
 
 
-
-if __name__ == '__main__':
-    data = Data('spec_ML.csv')
-    data.flux_removal(cutoff=0.999, percent=50)
-    model = Model(data, classifier='linear')
-    wavelength = data.get_wavelength()
-    flux = model.get_spectrum((6320, 3.42, -0.45, 0.05))
-    plt.figure(figsize=(12, 6))
-    plt.plot(wavelength, flux)
-    plt.show()
+#if __name__ == '__main__':
+    #data = Data('spec_ML.csv')
+    #data.flux_removal(cutoff=0.999, percent=50)
+    #model = Model(data, classifier='linear')
+    #wavelength = data.get_wavelength()
+    #Model.self_check(model)
+    #flux = model.get_spectrum((6320, 3.42, -0.45, 0.05))
+    #plt.figure(figsize=(12, 6))
+    #plt.plot(wavelength, flux)
+    #plt.show()

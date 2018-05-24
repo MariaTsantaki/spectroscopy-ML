@@ -1,9 +1,9 @@
-<<<<<<< HEAD
 from model_training import Data, Model
 from scipy.optimize import minimize
 import numpy as np
 import matplotlib.pyplot as plt
 from time import time
+import pandas as pd
 try:
     from joblib import Parallel, delayed
     joblib_import = True
@@ -62,31 +62,40 @@ class Minimizer:
         plt.show()
 
 
-
 if __name__ == '__main__':
-    data = Data('spec_ml.hdf')
-    model = Model(data, classifier='ridgeCV', load=True, fname='FASMA_large_ML.pkl')
+
+
+    #data = Data('spec_ml.hdf')
+    #model = Model(data, classifier='ridgeCV', load=True, fname='FASMA_large_ML.pkl')
     # model = Model(data, classifier='ridgeCV', save=True, fname='FASMA_large_ML.pkl')
-    wavelength = data.get_wavelength()
-    result = data.X_test.iloc[0]
-    flux = data.y_test.iloc[0]
+    #wavelength = data.get_wavelength()
+    #result = data.X_test.iloc[0]
+    #flux = data.y_test.iloc[0]
 
-    t = time()
-    minimizer = Minimizer(flux, model)
-    res = minimizer.minimize()
-    print('Minimized in {}s\n'.format(round(time()-t, 2)))
+    #t = time()
+    #minimizer = Minimizer(flux, model)
+    #res = minimizer.minimize()
+    #print('Minimized in {}s\n'.format(round(time()-t, 2)))
 
-    print('#'*30)
-    print('Teff(real) {}K'.format(int(result['teff'])))
-    print('Teff(min) {}K'.format(int(res.x[0])))
-    print('logg(real) {}dex'.format(result['logg']))
-    print('logg(min) {}dex'.format(round(res.x[1], 2)))
-    print('[Fe/H](real) {}dex'.format(result['feh']))
-    print('[Fe/H](min) {}dex'.format(round(res.x[2], 2)))
-    print('[a/Fe](real) {}dex'.format(result['alpha']))
-    print('[a/Fe](min) {}dex'.format(round(res.x[3], 2)))
+    #print('#'*30)
+    #print('Teff(real) {}K'.format(int(result['teff'])))
+    #print('Teff(min) {}K'.format(int(res.x[0])))
+    #print('logg(real) {}dex'.format(result['logg']))
+    #print('logg(min) {}dex'.format(round(res.x[1], 2)))
+    #print('[Fe/H](real) {}dex'.format(result['feh']))
+    #print('[Fe/H](min) {}dex'.format(round(res.x[2], 2)))
+    #print('[a/Fe](real) {}dex'.format(result['alpha']))
+    #print('[a/Fe](min) {}dex'.format(round(res.x[3], 2)))
 
-    minimizer.plot()
+    #minimizer.plot()
+
+    #data = Data('spec_ML.csv')
+    #data.flux_removal(cutoff=0.999, percent=50)
+    #X_test = data.X_test
+    #y_test = data.y_test
+    #model = Model(data, classifier='ridge')
+    #wavelength = data.get_wavelength()
+    #self_check(X_test, y_test, model, plot=True)
 
 
     if joblib_import and False:
