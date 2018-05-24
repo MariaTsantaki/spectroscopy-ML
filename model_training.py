@@ -1,10 +1,10 @@
 from __future__ import division
-import pandas as pd
 import numpy as np
 from sklearn import linear_model, preprocessing
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 from time import time
+import pandas as pd
 try:
     import cPickle
 except ImportError:
@@ -30,6 +30,8 @@ class Data:
             self.split_data()
         if self.scale:
             self.scale_data()
+
+        #X.data,y.data are the trained data, X_test and y_test are not scaled!
 
     def get_wavelength(self):
         wavelength = np.array(list(map(float, self.y.columns.values)))
@@ -59,7 +61,9 @@ class Data:
                 continuum.append(wavelength)
         columns = np.array(continuum)
         self.y.drop(columns, inplace=True, axis=1)
+        self.y_test.drop(columns, inplace=True, axis=1)
         print('The number of flux points is %s from the original %s.' % (len(self.ylabel)-len(continuum), len(self.ylabel)))
+        return continuum
 
     def split_data(self, test_size=0.10):
         self.X, self.X_test, self.y, self.y_test = train_test_split(self.X, self.y, test_size=test_size)
@@ -126,13 +130,12 @@ class Model:
         return f
 
 
-#if __name__ == '__main__':
-    #data = Data('spec_ML.csv')
-    #data.flux_removal(cutoff=0.999, percent=50)
-    #model = Model(data, classifier='linear')
-    #wavelength = data.get_wavelength()
-    #Model.self_check(model)
-    #flux = model.get_spectrum((6320, 3.42, -0.45, 0.05))
-    #plt.figure(figsize=(12, 6))
-    #plt.plot(wavelength, flux)
-    #plt.show()
+if __name__ == '__main__':
+    data = Data('spec_ML.csv')
+    continuum = data.flux_removal(cutoff=0.999, percent=50)
+    model = Model(data, classifier='linear')
+    wavelength = data.get_wavelength()
+    flux = model.get_spectrum((6320, 3.42, -0.45, 0.05))
+    plt.figure(figsize=(12, 6))
+    plt.plot(wavelength, flux)
+    plt.show()

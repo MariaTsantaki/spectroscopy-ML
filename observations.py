@@ -246,7 +246,7 @@ def read_obs_intervals(obs_fname, r, snr=100, method='linear'):
 
     #y_obs[y_obs == 0] = 1
     snr = snr_apogee(obs_fname)
-    print('SNR: %s' % int(snr))
+    #print('SNR: %s' % int(snr))
     return x_obs, y_obs, delta_l
 
 

@@ -1,9 +1,9 @@
+from __future__ import division
 from model_training import Data, Model
 from scipy.optimize import minimize
 import numpy as np
 import matplotlib.pyplot as plt
 from time import time
-import pandas as pd
 try:
     from joblib import Parallel, delayed
     joblib_import = True
@@ -64,10 +64,9 @@ class Minimizer:
 
 if __name__ == '__main__':
 
-
     #data = Data('spec_ml.hdf')
     #model = Model(data, classifier='ridgeCV', load=True, fname='FASMA_large_ML.pkl')
-    # model = Model(data, classifier='ridgeCV', save=True, fname='FASMA_large_ML.pkl')
+    #model = Model(data, classifier='ridgeCV', save=True, fname='FASMA_large_ML.pkl')
     #wavelength = data.get_wavelength()
     #result = data.X_test.iloc[0]
     #flux = data.y_test.iloc[0]
@@ -89,13 +88,6 @@ if __name__ == '__main__':
 
     #minimizer.plot()
 
-    #data = Data('spec_ML.csv')
-    #data.flux_removal(cutoff=0.999, percent=50)
-    #X_test = data.X_test
-    #y_test = data.y_test
-    #model = Model(data, classifier='ridge')
-    #wavelength = data.get_wavelength()
-    #self_check(X_test, y_test, model, plot=True)
 
 
     if joblib_import and False:
