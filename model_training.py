@@ -5,7 +5,7 @@ from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 from time import time
 import pandas as pd
-from sklearn.feature_selection import SelectPercentile, f_classif
+from sklearn.feature_selection import SelectPercentile, f_regression, VarianceThreshold
 try:
     import cPickle
 except ImportError:
@@ -74,15 +74,26 @@ class Data:
         self.X, self.X_test, self.y, self.y_test = train_test_split(self.X, self.y, test_size=test_size)
 
     def scale_data(self):
-        self.scaler = preprocessing.StandardScaler().fit(self.X)
+        self.scaler = preprocessing.RobustScaler().fit(self.X)
         self.X = self.scaler.transform(self.X)
 
     def feature_selection(self):
-        selector = SelectPercentile(f_classif, percentile=10)
-        selector.fit(self.X, self.y)
-        scores = -np.log10(selector.pvalues_)
-        scores /= scores.max()
-        print(scores)
+        feature_names = ['teff', 'logg', 'feh', 'alpha', 'teff**2', 'logg**2', 'feh**2', 'alpha**2', 'teff*logg', 'teff*feh', 'logg*feh', 'teff*alpha', 'alpha*feh', 'logg*alpha']
+        selector = SelectPercentile(f_regression, percentile=20)
+        y = self.y.values
+        totalscore = []
+        for i, yy in enumerate(y):
+            selector.fit_transform(self.X, y[:,i])
+            names = [feature_names[i] for i in np.argsort(selector.scores_)[::-1]]
+            totalscore.append(selector.scores_)
+
+    def feature_selection(self):
+        selector = VarianceThreshold(0.3)
+        selector.fit(self.X)
+        features = selector.get_support(indices = True)
+        feature_names = ['teff', 'logg', 'feh', 'alpha', 'teff**2', 'logg**2', 'feh**2', 'alpha**2', 'teff*logg', 'teff*feh', 'logg*feh', 'teff*alpha', 'alpha*feh', 'logg*alpha']
+        for i in features:
+            print(feature_names[i])
 
 class Model:
     def __init__(self, data, classifier='linear', save=True, load=False, fname='FASMA_ML.pkl'):
@@ -129,8 +140,8 @@ class Model:
         teff, logg, feh, alpha = p
         v = [teff, logg, feh, alpha]
         if self.data.with_quadratic_terms:
-            #v += [teff**2, logg**2, feh**2, alpha**2]
             v += [teff**2, logg**2, feh**2, alpha**2, teff*logg, teff*feh, logg*feh, teff*alpha, alpha*feh, logg*alpha]
+            #v += [alpha**2, teff*logg, logg*feh, teff*alpha, alpha*feh, logg*alpha]
         v = np.array(v).reshape(1, -1)
         return v
 
