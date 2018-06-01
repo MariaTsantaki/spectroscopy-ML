@@ -25,9 +25,9 @@ class Minimizer:
         self.model = model
         self.p0 = p0
 
-    def minimize(self, method=None):
+    def minimize(self, method='L-BFGS-B'):
         self.method = method
-        self.res = minimize(self.chi2, self.p0, method=method)
+        self.res = minimize(self.chi2, self.p0, method=method, bounds=((3000, 7000), (3.8, 5.0), (-2.0, 0.6), (-0.5, 0.5)), tol=1e-20)
         self.parameters = self.res.x
         return self.res
 
@@ -87,8 +87,6 @@ if __name__ == '__main__':
     #print('[a/Fe](min) {}dex'.format(round(res.x[3], 2)))
 
     #minimizer.plot()
-
-
 
     if joblib_import and False:
         print('\n\nComparing running on multiple cores')

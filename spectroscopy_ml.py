@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from time import time
 import pandas as pd
 from utils import prepare_spectrum_synth, prepare_spectrum, save_and_compare_synthetic, save_and_compare_apogee
+from matplotlib import cm
 
 def self_check(X_test, y_test, model, plot=True):
     x_pred = []
@@ -15,13 +16,46 @@ def self_check(X_test, y_test, model, plot=True):
     xlabel = ['teff', 'logg', 'feh', 'alpha']
     params = pd.DataFrame(np.array(x_pred), columns=xlabel)
     if plot:
-        for i, label in enumerate(xlabel):
-            plt.figure()
-            plt.scatter(X_test[label], X_test[label].values - params[label].values, s=70, alpha=0.4)
-            plt.grid()
-            plt.title(label)
-            #plt.savefig(label + '_' + model + '.png')
-            plt.show()
+        #for i, label in enumerate(xlabel):
+        #    plt.figure()
+        #    plt.scatter(X_test[label], X_test[label].values - params[label].values, s=70, alpha=0.4)
+        #    plt.grid()
+        #    plt.title(label)
+        #    #plt.savefig(label + '_' + model + '.png')
+        #    plt.show()
+        plt.figure()
+        plt.scatter(X_test['teff'], X_test['teff'].values - params['teff'].values, c=X_test['feh'], alpha=0.8, cmap=cm.jet)
+        plt.colorbar()
+        plt.grid()
+        plt.show()
+        plt.figure()
+        plt.scatter(X_test['teff'], params['teff'].values, c=X_test['logg'], alpha=0.8, cmap=cm.jet)
+        plt.plot([4000, 6700], [4000, 6700], color='k', linestyle='-', linewidth=2)
+        plt.colorbar()
+        plt.grid()
+        plt.show()
+        plt.figure()
+        plt.scatter(X_test['logg'], X_test['logg'].values - params['logg'].values, c=X_test['teff'], alpha=0.8, cmap=cm.jet)
+        plt.colorbar()
+        plt.grid()
+        plt.show()
+        plt.figure()
+        plt.scatter(X_test['logg'], params['logg'].values, c=X_test['teff'], alpha=0.8, cmap=cm.jet)
+        plt.plot([3.9, 4.9], [3.9, 4.9], color='k', linestyle='-', linewidth=2)
+        plt.colorbar()
+        plt.grid()
+        plt.show()
+        plt.figure()
+        plt.scatter(X_test['feh'], X_test['feh'].values - params['feh'].values, c=X_test['teff'], alpha=0.8, cmap=cm.jet)
+        plt.colorbar()
+        plt.grid()
+        plt.show()
+        plt.figure()
+        plt.scatter(X_test['feh'], params['feh'].values, c=X_test['teff'], alpha=0.8, cmap=cm.jet)
+        plt.plot([-2.0, 0.4], [-2.0, 0.4], color='k', linestyle='-', linewidth=2)
+        plt.colorbar()
+        plt.grid()
+        plt.show()
 
 def test_set_synth(model, continuum=None, fname='obs_synth.lst'):
 
@@ -98,15 +132,15 @@ def test_set_apogee(model, continuum=None, fname='obs.lst'):
 
 
 if __name__ == '__main__':
-    data = Data('spec_ml.hdf')
-    continuum = data.flux_removal(cutoff=0.999, percent=50)
+    data = Data('spec_ml.hdf', with_quadratic_terms=True)
+    continuum = data.flux_removal(cutoff=0.998, percent=40)
     X_test = data.X_test
     y_test = data.y_test
 
-    class_name = ['lasso', 'multilasso', 'lassolars', 'ridge', 'ridgeCV']
+    class_name = ['linear']
     for m in class_name:
         print(m)
         model = Model(data, classifier=m)
         self_check(X_test, y_test, model, plot=True)
         test_set_synth(model, continuum=continuum)
-        #test_set_apogee(model, continuum=continuum)
+        test_set_apogee(model, continuum=continuum)

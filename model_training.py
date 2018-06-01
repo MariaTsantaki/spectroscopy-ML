@@ -25,6 +25,7 @@ class Data:
             reader = pd.read_csv
         self.df = reader(fname, index_col=0)
         self.df.set_index('spectrum', inplace=True)
+        #self.df = self.df[self.df['feh'] > -1.0]
 
         self._prepare_data()
         if self.split:
@@ -77,7 +78,7 @@ class Data:
         self.scaler = preprocessing.RobustScaler().fit(self.X)
         self.X = self.scaler.transform(self.X)
 
-    def feature_selection(self):
+    def feature_selection_percentile(self):
         feature_names = ['teff', 'logg', 'feh', 'alpha', 'teff**2', 'logg**2', 'feh**2', 'alpha**2', 'teff*logg', 'teff*feh', 'logg*feh', 'teff*alpha', 'alpha*feh', 'logg*alpha']
         selector = SelectPercentile(f_regression, percentile=20)
         y = self.y.values
@@ -86,14 +87,18 @@ class Data:
             selector.fit_transform(self.X, y[:,i])
             names = [feature_names[i] for i in np.argsort(selector.scores_)[::-1]]
             totalscore.append(selector.scores_)
+        #if feature selection is used then labels should change!
 
-    def feature_selection(self):
-        selector = VarianceThreshold(0.3)
+    def feature_selection_variance(self):
+        selector = VarianceThreshold(0.5)
         selector.fit(self.X)
         features = selector.get_support(indices = True)
         feature_names = ['teff', 'logg', 'feh', 'alpha', 'teff**2', 'logg**2', 'feh**2', 'alpha**2', 'teff*logg', 'teff*feh', 'logg*feh', 'teff*alpha', 'alpha*feh', 'logg*alpha']
         for i in features:
             print(feature_names[i])
+        features = [column for column in self.X[features]]
+        #if feature selection is used then labels should change!
+
 
 class Model:
     def __init__(self, data, classifier='linear', save=True, load=False, fname='FASMA_ML.pkl'):
