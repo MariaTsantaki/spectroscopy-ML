@@ -3,5 +3,9 @@ __pycache__
 *.hdf
 synthetic_spec
 FASMA_ML.pkl
+.mypy_cache
+build
+dist
+*.egg-info
 
 *.swp

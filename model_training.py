@@ -1,6 +1,6 @@
 from __future__ import division
 import numpy as np
-from sklearn import linear_model, preprocessing
+from sklearn import linear_model, preprocessing, neural_network
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 from time import time
@@ -25,15 +25,12 @@ class Data:
             reader = pd.read_csv
         self.df = reader(fname, index_col=0)
         self.df.set_index('spectrum', inplace=True)
-        #self.df = self.df[self.df['feh'] > -1.0]
 
         self._prepare_data()
         if self.split:
             self.split_data()
         if self.scale:
             self.scale_data()
-        #self.feature_selection()
-        #X.data,y.data are the trained data, X_test and y_test are not scaled!
 
     def get_wavelength(self):
         wavelength = np.array(list(map(float, self.y.columns.values)))
@@ -56,6 +53,7 @@ class Data:
             self.X['teff*alpha'] = self.X['teff'] * self.X['alpha']
             self.X['alpha*feh'] = self.X['alpha'] * self.X['feh']
             self.X['logg*alpha'] = self.X['logg'] * self.X['alpha']
+        self.labels = self.X.columns
 
     def flux_removal(self, cutoff=0.995, percent=40):
         print('The percentage of flux points dropped is %s with a %s cutoff.' % (percent, cutoff))
@@ -97,17 +95,16 @@ class Data:
         for i in features:
             print(feature_names[i])
         features = [column for column in self.X[features]]
-        #if feature selection is used then labels should change!
 
 
 class Model:
     def __init__(self, data, classifier='linear', save=True, load=False, fname='FASMA_ML.pkl'):
-        self.classifier = classifier
+        self.classifier = classifier.lower()
         self.data = data
         self.save = save
         self.load = load
         self.fname = fname
-        self.X_train, self.y_train = data.X, data.y
+        self.X_train, self.y_train = self.data.X, self.data.y
 
         if self.classifier == 'linear':
             self.clf = linear_model.LinearRegression(n_jobs=-1)
@@ -125,6 +122,9 @@ class Model:
             self.clf = linear_model.BayesianRidge()
         elif self.classifier == 'huber':
             self.clf = linear_model.HuberRegressor()
+        elif self.classifier == 'nn':
+            self.clf = neural_network.MLPRegressor(hidden_layer_sizes=(16, 32), verbose=True)
+
 
         # Train the classifier
         if not self.load:
@@ -155,15 +155,19 @@ class Model:
         if self.data.scale:
             v = self.data.scaler.transform(v)
         f = self.clf.predict(v)[0]
+        # TODO: Make all fluxes above 1 set to 1. Same with below 0 set to 0
+        # f[f>1] = 1
+        # f[f<0] = 0
         return f
 
 
 if __name__ == '__main__':
     data = Data('spec_ml.hdf')
-    continuum = data.flux_removal(cutoff=0.999, percent=50)
-    model = Model(data, classifier='linear')
+    # continuum = data.flux_removal(cutoff=0.999, percent=50)
+    # model = Model(data, classifier='linear')
+    model = Model(data, classifier='nn')
     wavelength = data.get_wavelength()
-    flux = model.get_spectrum((6320, 3.42, -0.45, 0.05))
+    flux = model.get_spectrum((5320, 3.42, 0.05, 0.05))
     plt.figure(figsize=(12, 6))
     plt.plot(wavelength, flux)
     plt.show()

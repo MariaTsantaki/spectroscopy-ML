@@ -25,15 +25,16 @@ class Minimizer:
         self.model = model
         self.p0 = p0
 
-    def minimize(self, method='L-BFGS-B'):
+    def minimize(self, method=None):
         self.method = method
-        self.res = minimize(self.chi2, self.p0, method=method, bounds=((3000, 7000), (3.8, 5.0), (-2.0, 0.6), (-0.5, 0.5)), tol=1e-20)
+        # bounds = ((3000, 7000), (3.8, 5.0), (-2.0, 0.6), (-0.5, 0.5))
+        self.res = minimize(self.chi2, self.p0, method=method)
         self.parameters = self.res.x
-        return self.res
+        return self.res, np.array(steps), np.array(fmin)
 
     def chi2(self, p, error=1):
         h = self.model.get_spectrum(p)
-        return np.sum((self.flux - h)**2) / error
+        return np.sum((self.flux - h)**2 / error)
 
     def plot(self, save=False, fname=None):
         flux0 = self.model.get_spectrum(self.p0)
@@ -64,42 +65,45 @@ class Minimizer:
 
 if __name__ == '__main__':
 
-    #data = Data('spec_ml.hdf')
-    #model = Model(data, classifier='ridgeCV', load=True, fname='FASMA_large_ML.pkl')
-    #model = Model(data, classifier='ridgeCV', save=True, fname='FASMA_large_ML.pkl')
-    #wavelength = data.get_wavelength()
-    #result = data.X_test.iloc[0]
-    #flux = data.y_test.iloc[0]
+    data = Data('spec_ml.hdf')
+    model = Model(data, classifier='ridgeCV', load=True, fname='FASMA_large_ML.pkl')
+    # model = Model(data, classifier='linear', save=True, fname='FASMA_large_ML.pkl')
+    wavelength = data.get_wavelength()
+    result = data.X_test.iloc[0]
+    flux = data.y_test.iloc[0]
 
-    #t = time()
-    #minimizer = Minimizer(flux, model)
-    #res = minimizer.minimize()
-    #print('Minimized in {}s\n'.format(round(time()-t, 2)))
+    t = time()
+    minimizer = Minimizer(flux, model)
+    res, steps, fmin = minimizer.minimize(method='L-BFGS-B')
+    print('Minimized in {}s\n'.format(round(time()-t, 2)))
 
-    #print('#'*30)
-    #print('Teff(real) {}K'.format(int(result['teff'])))
-    #print('Teff(min) {}K'.format(int(res.x[0])))
-    #print('logg(real) {}dex'.format(result['logg']))
-    #print('logg(min) {}dex'.format(round(res.x[1], 2)))
-    #print('[Fe/H](real) {}dex'.format(result['feh']))
-    #print('[Fe/H](min) {}dex'.format(round(res.x[2], 2)))
-    #print('[a/Fe](real) {}dex'.format(result['alpha']))
-    #print('[a/Fe](min) {}dex'.format(round(res.x[3], 2)))
+    print('#'*30)
+    print('Teff(real) {}K'.format(int(result['teff'])))
+    print('Teff(min) {}K'.format(int(res.x[0])))
+    print('logg(real) {}dex'.format(result['logg']))
+    print('logg(min) {}dex'.format(round(res.x[1], 2)))
+    print('[Fe/H](real) {}dex'.format(result['feh']))
+    print('[Fe/H](min) {}dex'.format(round(res.x[2], 2)))
+    print('[a/Fe](real) {}dex'.format(result['alpha']))
+    print('[a/Fe](min) {}dex'.format(round(res.x[3], 2)))
 
-    #minimizer.plot()
+    minimizer.plot()
+
 
     if joblib_import and False:
         print('\n\nComparing running on multiple cores')
         N = int(len(data.y_test)/10)
         def f(i):
+            print(i)
             flux = data.y_test.iloc[i]
+            result = data.X_test.iloc[i]
             m = Minimizer(flux, model)
-            r = m.minimize()
-            return r
+            r, _, _ = m.minimize(method='Nelder-Mead')
+            return [r.x[0], result['teff']]
 
-        t = time()
-        r1 = [f(i) for i in range(N)]
-        t1 = time() - t
+        # t = time()
+        # r1 = [f(i) for i in range(N)]
+        # t1 = time() - t
 
         t = time()
         r2 = Parallel(n_jobs=3)(delayed(f)(i) for i in range(N))
