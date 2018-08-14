@@ -1,5 +1,5 @@
 from __future__ import division
-from model_training import Data, Model
+from .model_training import Data, Model
 from scipy.optimize import minimize
 import numpy as np
 import matplotlib.pyplot as plt
@@ -27,12 +27,12 @@ class Minimizer:
 
     def minimize(self, method=None):
         self.method = method
-        # bounds = ((3000, 7000), (3.8, 5.0), (-2.0, 0.6), (-0.5, 0.5))
         self.res = minimize(self.chi2, self.p0, method=method)
         self.parameters = self.res.x
-        return self.res, np.array(steps), np.array(fmin)
+        return self.res
 
     def chi2(self, p, error=1):
+        # print(p)
         h = self.model.get_spectrum(p)
         return np.sum((self.flux - h)**2 / error)
 
@@ -65,16 +65,17 @@ class Minimizer:
 
 if __name__ == '__main__':
 
-    data = Data('spec_ml.hdf')
-    model = Model(data, classifier='ridgeCV', load=True, fname='FASMA_large_ML.pkl')
-    # model = Model(data, classifier='linear', save=True, fname='FASMA_large_ML.pkl')
+    data = Data('data/spec_ml.hdf', with_quadratic_terms=True)
+    # model = Model(data, classifier='nn', save=True, fname='FASMA_ML_nn.pkl')
+    # model = Model(data, classifier='nn', load=True, fname='FASMA_ML_nn.pkl')
+    model = Model(data, classifier='ridge', load=True, fname='FASMA_large_ML.pkl')
     wavelength = data.get_wavelength()
     result = data.X_test.iloc[0]
     flux = data.y_test.iloc[0]
 
     t = time()
     minimizer = Minimizer(flux, model)
-    res, steps, fmin = minimizer.minimize(method='L-BFGS-B')
+    res = minimizer.minimize()
     print('Minimized in {}s\n'.format(round(time()-t, 2)))
 
     print('#'*30)
@@ -105,7 +106,7 @@ if __name__ == '__main__':
         # r1 = [f(i) for i in range(N)]
         # t1 = time() - t
 
-        t = time()
+        t1 = time()
         r2 = Parallel(n_jobs=3)(delayed(f)(i) for i in range(N))
         t2 = time() - t
 

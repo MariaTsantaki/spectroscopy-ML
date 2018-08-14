@@ -132,7 +132,7 @@ def test_set_apogee(model, continuum=None, fname='obs.lst'):
 
 
 if __name__ == '__main__':
-    data = Data('spec_ml.hdf', with_quadratic_terms=True)
+    data = Data('data/spec_ml.hdf', with_quadratic_terms=True)
     continuum = data.flux_removal(cutoff=0.998, percent=40)
     X_test = data.X_test
     y_test = data.y_test

@@ -250,7 +250,7 @@ def read_obs_intervals(obs_fname, r, snr=100, method='linear'):
     return x_obs, y_obs, delta_l
 
 
-def plot(x_obs, y_obs, x, y, res=False, linelist='moog_apogee_atom_cn_clean.lst', intervals='intervals.lst'):
+def plot(x_obs, y_obs, x, y, res=False, linelist='moog_apogee_atom_cn_clean.lst', intervals='data/intervals.lst'):
     """Function to plot synthetic spectrum.
     Input
     -----

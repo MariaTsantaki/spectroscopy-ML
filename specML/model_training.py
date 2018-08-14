@@ -123,7 +123,7 @@ class Model:
         elif self.classifier == 'huber':
             self.clf = linear_model.HuberRegressor()
         elif self.classifier == 'nn':
-            self.clf = neural_network.MLPRegressor(hidden_layer_sizes=(16, 32), verbose=True)
+            self.clf = neural_network.MLPRegressor(hidden_layer_sizes=(6,), verbose=True)
 
 
         # Train the classifier
@@ -156,16 +156,16 @@ class Model:
             v = self.data.scaler.transform(v)
         f = self.clf.predict(v)[0]
         # TODO: Make all fluxes above 1 set to 1. Same with below 0 set to 0
-        # f[f>1] = 1
-        # f[f<0] = 0
+        f[f>1] = 1
+        f[f<0] = 0
         return f
 
 
 if __name__ == '__main__':
-    data = Data('spec_ml.hdf')
+    data = Data('data/spec_ml.hdf', with_quadratic_terms=False)
     # continuum = data.flux_removal(cutoff=0.999, percent=50)
     # model = Model(data, classifier='linear')
-    model = Model(data, classifier='nn')
+    model = Model(data, classifier='nn', save=True, fname='FASMA_ML_nn.pkl')
     wavelength = data.get_wavelength()
     flux = model.get_spectrum((5320, 3.42, 0.05, 0.05))
     plt.figure(figsize=(12, 6))

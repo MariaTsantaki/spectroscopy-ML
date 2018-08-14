@@ -45,7 +45,7 @@ def create_combined():
     df = pd.DataFrame(data)
     df.columns = header
     print('Writing to file..')
-    df.to_csv('combined_spec.hdf')
+    df.to_csv('data/combined_spec.hdf')
     return
 
 
@@ -64,7 +64,7 @@ def prepare_spectrum_synth(spectrum, continuum=None):
     return flux.reshape(1, -1), wave
 
 
-def prepare_spectrum(spectrum, continuum=None, intname='intervals.lst'):
+def prepare_spectrum(spectrum, continuum=None, intname='data/intervals.lst'):
     intervals = pd.read_csv('rawLinelist/%s' % intname, comment='#', names=['start', 'end'], delimiter='\t')
     ranges = intervals.values
 

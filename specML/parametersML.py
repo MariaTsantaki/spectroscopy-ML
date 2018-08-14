@@ -48,9 +48,9 @@ def _parser():
 
 
 def train(clf, save=True, plot=True):
-    if not os.path.isfile('combined_spec.hdf'):
+    if not os.path.isfile('data/combined_spec.hdf'):
         create_combined()
-    df = pd.read_hdf('combined_spec.hdf')
+    df = pd.read_hdf('data/combined_spec.hdf')
     df.set_index('spectrum', inplace=True)
     xlabel = df.columns.values[:-6]
     ylabel = df.columns.values[-6:]
