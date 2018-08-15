@@ -146,7 +146,6 @@ class Model:
         v = [teff, logg, feh, alpha]
         if self.data.with_quadratic_terms:
             v += [teff**2, logg**2, feh**2, alpha**2, teff*logg, teff*feh, logg*feh, teff*alpha, alpha*feh, logg*alpha]
-            #v += [alpha**2, teff*logg, logg*feh, teff*alpha, alpha*feh, logg*alpha]
         v = np.array(v).reshape(1, -1)
         return v
 
@@ -155,17 +154,16 @@ class Model:
         if self.data.scale:
             v = self.data.scaler.transform(v)
         f = self.clf.predict(v)[0]
-        # TODO: Make all fluxes above 1 set to 1. Same with below 0 set to 0
         f[f>1] = 1
         f[f<0] = 0
         return f
 
 
 if __name__ == '__main__':
-    data = Data('data/spec_ml.hdf', with_quadratic_terms=False)
+    data = Data('data/spec_ml.hdf', with_quadratic_terms=False, scale=False)
     # continuum = data.flux_removal(cutoff=0.999, percent=50)
-    # model = Model(data, classifier='linear')
-    model = Model(data, classifier='nn', save=True, fname='FASMA_ML_nn.pkl')
+    model = Model(data, classifier='linear', save=True, fname='FASMA_large_ML.pkl')
+    # model = Model(data, classifier='nn', save=True, fname='FASMA_ML_nn.pkl')
     wavelength = data.get_wavelength()
     flux = model.get_spectrum((5320, 3.42, 0.05, 0.05))
     plt.figure(figsize=(12, 6))

@@ -1,5 +1,5 @@
 from __future__ import division
-from .model_training import Data, Model
+from specML.model_training import Data, Model
 from scipy.optimize import minimize
 import numpy as np
 import matplotlib.pyplot as plt
@@ -37,13 +37,14 @@ class Minimizer:
         return np.sum((self.flux - h)**2 / error)
 
     def plot(self, save=False, fname=None):
+        wavelength = self.model.data.get_wavelength()
         flux0 = self.model.get_spectrum(self.p0)
         flux_res = self.model.get_spectrum(self.res.x)
         plt.figure(figsize=(12, 8))
         plt.plot(wavelength, self.flux, label='Observation')
         plt.plot(wavelength, flux0, label='Initial guess', alpha=0.4)
         plt.plot(wavelength, flux_res, label='Final result')
-        plt.plot(wavelength, flux-flux_res + 1.1, alpha=0.7, label='Difference')
+        plt.plot(wavelength, self.flux-flux_res + 1.1, alpha=0.7, label='Difference')
         plt.xlabel('Wavelength')
         plt.ylabel('Flux')
         plt.legend(loc='best', frameon=False)

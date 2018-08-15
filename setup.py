@@ -10,5 +10,6 @@ setup(
     url='https://github.com/MariaTsantaki/spectroscopy-ML',
     cmdclass={'build_ext': build_ext},
 	package_data={'specML': ['data/combined_spec.hdf',
+							 'data/spec_ml.hdf',
 	                         'FASMA_large_ML.pkl']}
 )
