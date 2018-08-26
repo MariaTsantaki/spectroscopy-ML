@@ -5,7 +5,7 @@ from Cython.Distutils import build_ext
 setup(
 	maintainer='Maria Tsantaki and Daniel Andreasen',
     name='specML',
-	version=0.3,
+	version=0.4,
 	license='MIT',
     packages=find_packages(),
     url='https://github.com/MariaTsantaki/spectroscopy-ML',

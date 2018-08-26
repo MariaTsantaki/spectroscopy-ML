@@ -19,6 +19,9 @@ plt.rcParams['xtick.major.width'] = 2
 plt.rcParams['ytick.major.width'] = 2
 
 
+
+
+
 class Minimizer:
     def __init__(self, flux, model, p0=(5777, 4.44, 0.00, 0.0)):
         self.flux = flux
@@ -37,21 +40,37 @@ class Minimizer:
         return np.sum((self.flux - h)**2 / error)
 
     def plot(self, save=False, fname=None):
+        def onpick(event):
+            legline = event.artist
+            origline = lined[legline]
+            vis = not origline.get_visible()
+            origline.set_visible(vis)
+            if vis:
+                legline.set_alpha(1.0)
+            else:
+                legline.set_alpha(0.2)
+            fig.canvas.draw()
         wavelength = self.model.data.get_wavelength()
         flux0 = self.model.get_spectrum(self.p0)
         flux_res = self.model.get_spectrum(self.res.x)
-        plt.figure(figsize=(12, 8))
-        plt.plot(wavelength, self.flux, label='Observation')
-        plt.plot(wavelength, flux0, label='Initial guess', alpha=0.4)
-        plt.plot(wavelength, flux_res, label='Final result')
-        plt.plot(wavelength, self.flux-flux_res + 1.1, alpha=0.7, label='Difference')
+        fig = plt.figure(figsize=(12, 8))
+        line1, = plt.plot(wavelength, self.flux, label='Observation')
+        line2, = plt.plot(wavelength, flux0, label='Initial guess', alpha=0.4)
+        line3, = plt.plot(wavelength, flux_res, label='Final result')
+        line4, = plt.plot(wavelength, self.flux-flux_res + 1.1, alpha=0.7, label='Difference')
         plt.xlabel('Wavelength')
         plt.ylabel('Flux')
-        plt.legend(loc='best', frameon=False)
+        leg = plt.legend(loc='best', frameon=False)
         plt.tight_layout()
         plt.grid(True)
         x1, x2 = plt.xlim()
         y1, y2 = plt.ylim()
+
+        lines = [line1, line2, line3, line4]
+        lined = dict()
+        for legline, origline in zip(leg.get_lines(), lines):
+            legline.set_picker(5)
+            lined[legline] = origline
 
         plt.text(x2*0.98, y1*1.08, r'$T_\mathrm{eff}$=%sK' % int(self.parameters[0]))
         plt.text(x2*0.98, y1*1.06, r'$\log g$={:.3}dex'.format(self.parameters[1]))
@@ -61,12 +80,14 @@ class Minimizer:
             if fname is None:
                 fname = 'result.pdf'
             plt.savefig(fname)
+        fig.canvas.mpl_connect('pick_event', onpick)
         plt.show()
 
 
 if __name__ == '__main__':
 
-    data = Data('data/spec_ml.hdf', with_quadratic_terms=True)
+    # data = Data('data/spec_ml_sample.hdf', with_quadratic_terms=True)
+    data = Data('data/spec_ml_sample.hdf', with_quadratic_terms=False, scale=False)
     # model = Model(data, classifier='nn', save=True, fname='FASMA_ML_nn.pkl')
     # model = Model(data, classifier='nn', load=True, fname='FASMA_ML_nn.pkl')
     model = Model(data, classifier='ridge', load=True, fname='FASMA_large_ML.pkl')
