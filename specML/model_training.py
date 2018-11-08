@@ -5,6 +5,7 @@ from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 from time import time
 import pandas as pd
+from utils import create_combined
 from sklearn.feature_selection import SelectPercentile, f_regression, VarianceThreshold
 try:
     import cPickle

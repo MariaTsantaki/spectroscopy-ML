@@ -5,12 +5,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 from time import time
 import pandas as pd
-from utils import int_spectrum_synth, save_and_compare_synthetic
+from utils import int_spectrum_synth, save_and_compare_synthetic, create_combined
 from matplotlib import cm
 import argparse
 from glob import glob
 import random
 from astropy.io import fits
+import os
 
 def self_check(X_test, y_test, model, clf, plot=True):
     x_pred = []
@@ -106,6 +107,9 @@ if __name__ == '__main__':
                         default='linear')
     args = parser.parse_args()
     clf = args.classifier
+
+    if not os.path.isfile('spec_ML.hdf'):
+        create_combined()
 
     d = Data('spec_ML.hdf', with_quadratic_terms=True, split=True, scale=True)
     d.flux_removal(cutoff=0.999, percent=20)

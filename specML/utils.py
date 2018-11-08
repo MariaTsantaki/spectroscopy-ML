@@ -10,7 +10,7 @@ from scipy.interpolate import InterpolatedUnivariateSpline
 
 def create_combined():
     #read synthetic fluxes
-    path_of_grid = '/data/train_data/'
+    path_of_grid = 'data/train_data/'
     spectra = glob(path_of_grid + '*11200_int.spec')
     spectra = list(map(lambda x: x.split('/')[-1], spectra))
 
