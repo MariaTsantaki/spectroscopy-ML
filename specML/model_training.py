@@ -173,7 +173,7 @@ class Model:
 
 if __name__ == '__main__':
 
-    data = Data('data/spec_ML.hdf', with_quadratic_terms=True, split=True, scale=True)
+    data = Data('spec_ML.hdf', with_quadratic_terms=True, split=True, scale=True)
     data.flux_removal(cutoff=0.999, percent=30)
     model = Model(data, classifier='linear', load=False)
     wavelength = data.get_wavelength()

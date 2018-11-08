@@ -10,7 +10,7 @@ from scipy.interpolate import InterpolatedUnivariateSpline
 
 def create_combined():
     #read synthetic fluxes
-    path_of_grid = '/home/mtsantaki/oporto/gaia_synthetic_kurucz/results_int_01/'
+    path_of_grid = '/data/train_data/'
     spectra = glob(path_of_grid + '*11200_int.spec')
     spectra = list(map(lambda x: x.split('/')[-1], spectra))
 
@@ -118,9 +118,6 @@ def plot_comparison_apogee(df):
     plt.xlabel(r'$T_{eff}$ Literature (K)')
     plt.ylabel(r'$T_{eff}$ - Literature')
     plt.plot(x, y, color='black')
-    #axes = plt.gca()
-    #axes.set_xlim([4000, 7000])
-    #axes.set_ylim([-1500, 1500])
     plt.grid(True)
     plt.plot(df['teff_lit'].astype(float), df['teff'].astype(float) - df['teff_lit'].astype(float), 'o', color='green', label='fasma')
     plt.plot(df['teff_lit'].astype(float), df['teff_calib'].astype(float) - df['teff_lit'].astype(float), 'o', color='red', label='APOGEE')
@@ -128,13 +125,9 @@ def plot_comparison_apogee(df):
     print('ML-LIT')
     #mean, median, std, mad = meanstdv(diff)
     results.append(meanstdv(diff))
-    #plt.text(4100, 400, 'mean: %s, median: %s K' % (int(mean), int(median)))
-    #plt.text(4100, 350, 'std: %s, MAD %s K' % (int(std), int(mad)))
     diff = df['teff_calib'].astype(float) - df['teff_lit'].astype(float)
     print('APOGEE-LIT')
     mean, median, std, mad = meanstdv(diff)
-    #plt.text(4100, 300, 'mean: %s, median: %s K' % (int(mean), int(median)))
-    #plt.text(4100, 250, 'std: %s, MAD %s K' % (int(std), int(mad)))
     plt.legend(frameon=False, numpoints=1)
     plt.savefig('teff_apogee.png')
     plt.show()
@@ -144,13 +137,9 @@ def plot_comparison_apogee(df):
     y = [0, 0]
     plt.xlabel('logg trigonometric (dex)')
     plt.ylabel('logg - Literature')
-    #yerror = np.sqrt(df['erlogg'].astype(float)**2 + df['erloggp'].astype(float)**2)
-    #yerror = pd.Series(yerror).values
     plt.plot(df['logg_lit'].astype(float), df['logg'].astype(float) - df['logg_lit'].astype(float), 'o', label='fasma')
     plt.plot(df['logg_lit'].astype(float), df['logg_uncalib'].astype(float) - df['logg_lit'].astype(float), 'o', label='APOGEE uncalib')
     plt.plot(df['logg_lit'].astype(float), df['logg_lit'].astype(float) - df['loggp'].astype(float), 'o', label='lit - paral')
-    #plt.plot(df['logg_lit'].astype(float), df['logg'].astype(float) - df['logg_lit'].astype(float), 'o', label='fasma')
-    #plt.plot(df['logg_lit'].astype(float), df['logg_uncalib'].astype(float) - df['logg_lit'].astype(float), 'o', color='black', label='APOGEE uncalib')
     plt.plot(x, y, color='black')
     #plt.colorbar()
     plt.legend(frameon=False, numpoints=1)
@@ -158,16 +147,9 @@ def plot_comparison_apogee(df):
     print('ML-LIT')
     #mean, median, std, mad = meanstdv(diff)
     results.append(meanstdv(diff))
-    #plt.text(3.3, -0.5, 'mean: %s, median: %s dex' % (mean, median))
-    #plt.text(3.3, -0.6, 'std: %s, MAD %s dex' % (std, mad))
     diff = df['logg_uncalib'].astype(float) - df['logg'].astype(float)
     print('APOGEE-LIT')
     mean, median, std, mad = meanstdv(diff)
-    #plt.text(3.3, -0.7, 'mean: %s, median: %s dex' % (mean, median))
-    #plt.text(3.3, -0.8, 'std: %s, MAD %s dex' % (std, mad))
-    #axes = plt.gca()
-    #axes.set_xlim([3.2, 5.0])
-    #axes.set_ylim([-2, 2])
     plt.grid(True)
     plt.savefig('logg_apogee.png')
     plt.show()
@@ -182,21 +164,15 @@ def plot_comparison_apogee(df):
     axes.set_xlim([-1.0, 0.6])
     axes.set_ylim([-1.0, 1.0])
     plt.grid(True)
-    #yerror = np.sqrt(df['erfeh'].astype(float)**2 + df['erfeh_lit'].astype(float)**2)
-    #yerror = pd.Series(yerror).values
     plt.plot(df['feh_lit'].astype(float), df['metal'].astype(float) - df['feh_lit'].astype(float), 'o', label='fasma')
     plt.plot(df['feh_lit'].astype(float), df['feh_calib'].astype(float) - df['feh_lit'].astype(float), 'o', label='APOGEE calib')
     diff = df['metal'].astype(float) - df['feh_lit'].astype(float)
     print('ML-LIT')
     #mean, median, std, mad = meanstdv(diff)
     results.append(meanstdv(diff))
-    #plt.text(-0.95, 0.3, 'mean: %s, median: %s dex' % (mean, median))
-    #plt.text(-0.95, 0.25, 'std: %s, MAD %s dex' % (std, mad))
     diff = df['feh_calib'].astype(float) - df['feh_lit'].astype(float)
     print('APOGEE-LIT')
     mean, median, std, mad = meanstdv(diff)
-    #plt.text(-0.95, 0.2, 'mean: %s, median: %s dex' % (mean, median))
-    #plt.text(-0.95, 0.15, 'std: %s, MAD %s dex' % (std, mad))
     plt.legend(frameon=False, numpoints=1)
     plt.savefig('metal_apogee.png')
     plt.show()
@@ -211,9 +187,6 @@ def plot_comparison_synthetic(df, class_name='linear'):
     plt.xlabel(r'$T_{eff}$ Literature (K)')
     plt.ylabel(r'$T_{eff}$ - Literature')
     plt.plot(x, y, color='black')
-    #axes = plt.gca()
-    #axes.set_xlim([4000, 7000])
-    #axes.set_ylim([-500, 500])
     plt.grid(True)
     plt.scatter(df['teff_lit'].astype(float), df['teff'].astype(float) - df['teff_lit'].astype(float), s=40, alpha=0.5, color='green')
     diff = df['teff'].astype(float) - df['teff_lit'].astype(float)
@@ -329,23 +302,11 @@ def save_and_compare_synthetic(d, class_name='linear'):
 def save_and_compare_apogee(d, model):
 
     df_ml = pd.DataFrame(data=d)
-    # Save ML parameters
-    #df_ml.to_csv('results_ML.dat', sep='\t')
-    # Compare with APOGEE values
-    #column_names = ['[M/H]', 'alpha', 'logg', 'specname', 'teff']
-    #df_ml.columns = column_names
-    #print(df_ml)
     # Compare with APOGEE values
     df_ap = pd.read_csv('apogee_params.dat', sep='\t')
     comp = pd.merge(df_ap, df_ml, how='left', on=['specname'])
     comp.replace(to_replace=[-9999], value='nan', inplace=True)
     results = plot_comparison_apogee(comp)
-    #label = ['teff', 'logg', 'metal', 'alpha']
-    #for l in label:
-    #    diff = comp[l].astype(float) - comp[l+'_lit'].astype(float)
-    #    diff = diff[diff > -8000]
-    #    diff.dropna(inplace=True)
-    #    results.append(meanstdv(diff))
     return results
 
 if __name__ == '__main__':

@@ -79,7 +79,7 @@ def self_check(X_test, y_test, model, clf, plot=True):
 def test_set_synth(model, continuum=None):
 
     #read synthetic fluxes
-    path_of_grid = 'data/results/'
+    path_of_grid = 'data/test_data/'
     spec = glob(path_of_grid + '*.spec')
     params = []
     for s in spec[:]:
@@ -112,21 +112,8 @@ if __name__ == '__main__':
     c = d.get_wavelength()
 
     model = Model(d, classifier=clf, save=True, load=False)
-    parser = argparse.ArgumentParser(description='Spectroscopic parameters with ML')
-    parser.add_argument('-c', '--classifier',
-                        help='Which classifier to use',
-                        choices=('linear', 'ridge', 'lasso', 'ridgeCV', 'lassolars'),
-                        default='linear')
-    args = parser.parse_args()
-    clf = args.classifier
-
-    d = Data('spec_ML.hdf', with_quadratic_terms=True, split=True, scale=True)
-    d.flux_removal(cutoff=0.999, percent=20)
-    c = d.get_wavelength()
-    model = Model(d, classifier=clf, save=True, load=False)
     X_test = d.X_test
     y_test = d.y_test
-
 
     self_check(X_test, y_test, model, clf, plot=True)
     test_set_synth(model, continuum=c)
