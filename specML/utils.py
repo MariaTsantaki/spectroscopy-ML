@@ -6,12 +6,12 @@ from observations import read_obs_intervals, read_observations, snr_apogee
 import matplotlib.pyplot as plt
 import os
 from matplotlib import cm
-
+from scipy.interpolate import InterpolatedUnivariateSpline
 
 def create_combined():
     #read synthetic fluxes
-    spectra = glob('/home/paranoia/mex/APOGEE_dwarfs_synthetic/results_int/*int.spec')
-    #spectra = glob('/home/paranoia/mex/APOGEE_dwarfs_synthetic/results_biggrid/*22500.spec')
+    path_of_grid = '/home/mtsantaki/oporto/gaia_synthetic_kurucz/results_int_01/'
+    spectra = glob(path_of_grid + '*11200_int.spec')
     spectra = list(map(lambda x: x.split('/')[-1], spectra))
 
     data = []
@@ -23,48 +23,62 @@ def create_combined():
         vmic  = specname.split('_')[3]
         vmac  = specname.split('_')[4]
         vsini = specname.split('_')[5]
-        alpha  = specname.split('_')[6]
+        alpha = specname.split('_')[6]
         #if vsini == '3.0':
-        hdulist = fits.open('/home/paranoia/mex/APOGEE_dwarfs_synthetic/results_int/' + specname)
-        #hdulist = fits.open('/home/paranoia/mex/APOGEE_dwarfs_synthetic/results_biggrid/' + specname)
+        hdulist = fits.open(path_of_grid + specname)
         x = hdulist[1].data
         flux = x['flux']
         flux = flux.tolist()
-        params = np.append(flux, [teff, logg, feh, alpha, vmic, vmac, vsini, specname])
+        params = np.append(flux, [teff, logg, feh, alpha, vmic, vmac, vsini])
         params = params.tolist()
         data.append(params)
         #else:
         #    pass
 
-    hdulist = fits.open('/home/paranoia/mex/APOGEE_dwarfs_synthetic/results_int/' + specname)
+    hdulist = fits.open(path_of_grid + specname)
     x = hdulist[1].data
     wave = x['wavelength']
-    columns = np.append(wave, ['teff', 'logg', 'feh', 'alpha', 'vmic', 'vmac', 'vsini', 'spectrum'])
+    columns = np.append(wave, ['teff', 'logg', 'feh', 'alpha', 'vmic', 'vmac', 'vsini'])
     header = columns.tolist()
     data = np.array(data)
     df = pd.DataFrame(data)
     df.columns = header
     print('Writing to file..')
-    df.to_csv('data/combined_spec.hdf')
+    df.to_hdf('spec_ML.hdf', key='df', mode='w')
     return
 
+def int_spectrum_synth(spectrum, continuum=None):
+    hdulist = fits.open(spectrum)
+    x = hdulist[1].data
+    flux = x['flux']
+    if continuum is not None:
+        wave = x['wavelength']
+        w = continuum.astype(np.float)
+        sl = InterpolatedUnivariateSpline(wave, flux, k=1)
+        flux = sl(w)
+    else:
+        wave = x['wavelength']
+    return flux.reshape(1, -1), wave
 
 def prepare_spectrum_synth(spectrum, continuum=None):
     hdulist = fits.open(spectrum)
     x = hdulist[1].data
     flux = x['flux']
     if continuum is not None:
+        continuum = continuum.astype(np.float)
+        continuum = np.round(continuum, 7)
+        continuum = continuum.astype(np.str)
         wave = x['wavelength']
-        c = np.array(continuum)
         wave = np.round(wave, 7)
         wave = wave.astype(np.str)
-        ind = np.isin(wave, c, invert=True)
+        ind = np.isin(wave, continuum)
         flux = flux[np.where(ind)]
         wave = wave[np.where(ind)]
+    else:
+        wave = x['wavelength']
     return flux.reshape(1, -1), wave
 
-
-def prepare_spectrum(spectrum, continuum=None, intname='data/intervals.lst'):
+def prepare_spectrum(spectrum, continuum=None, intname='intervals.lst'):
     intervals = pd.read_csv('rawLinelist/%s' % intname, comment='#', names=['start', 'end'], delimiter='\t')
     ranges = intervals.values
 
@@ -82,7 +96,6 @@ def prepare_spectrum(spectrum, continuum=None, intname='data/intervals.lst'):
         wave = wave[np.where(ind)]
     return flux.reshape(1, -1), wave
 
-
 def meanstdv(x):
     '''Simple statistics'''
     x = x[~np.isnan(x)]
@@ -91,13 +104,10 @@ def meanstdv(x):
     median = np.median(x)
     std    = np.std(x, ddof=1)
     stderr = std / np.sqrt(len(x))
-    print('mean %s median %s std %s stderr %s mad %s' % (round(mean, 3), round(median, 3), round(std, 3), round(stderr, 3), round(mad, 3)))
     return round(mean, 3), round(median, 3), round(std, 3), round(mad, 3)
-
 
 def mad(data, axis=None):
     return np.mean(np.absolute(data - np.mean(data, axis)), axis)
-
 
 def plot_comparison_apogee(df):
 
@@ -108,9 +118,9 @@ def plot_comparison_apogee(df):
     plt.xlabel(r'$T_{eff}$ Literature (K)')
     plt.ylabel(r'$T_{eff}$ - Literature')
     plt.plot(x, y, color='black')
-    axes = plt.gca()
-    axes.set_xlim([4000, 7000])
-    axes.set_ylim([-1500, 1500])
+    #axes = plt.gca()
+    #axes.set_xlim([4000, 7000])
+    #axes.set_ylim([-1500, 1500])
     plt.grid(True)
     plt.plot(df['teff_lit'].astype(float), df['teff'].astype(float) - df['teff_lit'].astype(float), 'o', color='green', label='fasma')
     plt.plot(df['teff_lit'].astype(float), df['teff_calib'].astype(float) - df['teff_lit'].astype(float), 'o', color='red', label='APOGEE')
@@ -155,9 +165,9 @@ def plot_comparison_apogee(df):
     mean, median, std, mad = meanstdv(diff)
     #plt.text(3.3, -0.7, 'mean: %s, median: %s dex' % (mean, median))
     #plt.text(3.3, -0.8, 'std: %s, MAD %s dex' % (std, mad))
-    axes = plt.gca()
-    axes.set_xlim([3.2, 5.0])
-    axes.set_ylim([-2, 2])
+    #axes = plt.gca()
+    #axes.set_xlim([3.2, 5.0])
+    #axes.set_ylim([-2, 2])
     plt.grid(True)
     plt.savefig('logg_apogee.png')
     plt.show()
@@ -193,8 +203,7 @@ def plot_comparison_apogee(df):
     results.append((0.0, 0.0, 0.0, 0.0))
     return results
 
-
-def plot_comparison_synthetic(df, model):
+def plot_comparison_synthetic(df, class_name='linear'):
 
     #teff
     x = [4000, 7000]
@@ -212,7 +221,7 @@ def plot_comparison_synthetic(df, model):
     plt.text(4100, 400, 'mean: %s, median: %s K' % (int(mean), int(median)))
     plt.text(4100, 350, 'std: %s, MAD %s K' % (int(std), int(mad)))
     #plt.legend(frameon=False, numpoints=1)
-    plt.savefig('teff_testset_' + model + '.png')
+    plt.savefig('teff_testset_' + class_name + '.png')
     #plt.show()
 
     #logg
@@ -232,7 +241,7 @@ def plot_comparison_synthetic(df, model):
     #axes.set_xlim([3.9, 5.0])
     #axes.set_ylim([-0.3, 0.3])
     plt.grid(True)
-    plt.savefig('logg_testset_' + model + '.png')
+    plt.savefig('logg_testset_' + class_name + '.png')
     #plt.show()
 
     #feh
@@ -251,7 +260,7 @@ def plot_comparison_synthetic(df, model):
     plt.text(-0.95, 0.15, 'mean: %s, median: %s dex' % (mean, median))
     plt.text(-0.95, 0.10, 'std: %s, MAD %s dex' % (std, mad))
     #plt.legend(frameon=False, numpoints=1)
-    plt.savefig('metal_testset_' + model + '.png')
+    plt.savefig('metal_testset_' + class_name + '.png')
     #plt.show()
 
     #alpha
@@ -272,18 +281,14 @@ def plot_comparison_synthetic(df, model):
     plt.text(-0.05, 0.3, 'mean: %s, median: %s dex' % (mean, median))
     plt.text(-0.05, 0.25, 'std: %s, MAD %s dex' % (std, mad))
     #plt.legend(frameon=False, numpoints=1)
-    plt.savefig('alpha_testset_' + model + '.png')
+    plt.savefig('alpha_testset_' + class_name + '.png')
     #plt.show()
 
     return
 
-
-def save_and_compare_synthetic(d, model):
+def save_and_compare_synthetic(d, class_name='linear'):
 
     df_ml = pd.DataFrame(data=d)
-    # Save ML parameters
-    #df_ml.to_csv('results_ML.dat', sep='\t')
-    #read synthetic fluxes
     spectra = df_ml['specname'].values
     spectra = list(map(lambda x: x.split('/')[-1], spectra))
 
@@ -304,7 +309,6 @@ def save_and_compare_synthetic(d, model):
     df = pd.DataFrame(data)
     df.columns = columns
     comp = pd.merge(df, df_ml, how='left', on=['specname'])
-    #comp.to_csv('comparison_ML.dat', sep='\t', na_rep='nan')
 
     label = ['teff', 'logg', 'metal', 'alpha']
     results = []
@@ -312,14 +316,15 @@ def save_and_compare_synthetic(d, model):
         plt.figure()
         plt.scatter(comp[l+'_lit'].astype(float), comp[l].astype(float) - comp[l+'_lit'].astype(float), s=40, alpha=0.5, color='green', label=str(l))
         diff = comp[l].astype(float) - comp[l+'_lit'].astype(float)
-        #mean, median, std, stderr, mad = meanstdv(diff)
-        results.append(meanstdv(diff))
+        r = meanstdv(diff)
+        results.append([r[0], r[1], r[2], r[3]])
+        print('%s: mean = %s, median = %s, std = %s, mad = %s' % (l, r[0], r[1], r[2], r[3]))
         plt.legend(frameon=False, numpoints=1)
+        plt.xlabel(str(l) + ' synthetic')
         plt.grid(True)
-        #plt.savefig(l + '_testset_' + model + '.png')
+        #plt.savefig(l + '_synthetic_' + class_name + '.png')
         plt.show()
     return results
-
 
 def save_and_compare_apogee(d, model):
 
@@ -332,10 +337,8 @@ def save_and_compare_apogee(d, model):
     #print(df_ml)
     # Compare with APOGEE values
     df_ap = pd.read_csv('apogee_params.dat', sep='\t')
-    #print(df_ap['specname'])
     comp = pd.merge(df_ap, df_ml, how='left', on=['specname'])
     comp.replace(to_replace=[-9999], value='nan', inplace=True)
-    #comp.to_csv('comparison_ML.dat', sep='\t', na_rep='nan')
     results = plot_comparison_apogee(comp)
     #label = ['teff', 'logg', 'metal', 'alpha']
     #for l in label:
@@ -344,3 +347,6 @@ def save_and_compare_apogee(d, model):
     #    diff.dropna(inplace=True)
     #    results.append(meanstdv(diff))
     return results
+
+if __name__ == '__main__':
+    create_combined()
