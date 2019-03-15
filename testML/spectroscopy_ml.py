@@ -19,7 +19,7 @@ import sklearn.metrics
 def test_set_synth(model, clf=None, continuum=None):
 
     #read synthetic fluxes
-    data = Data('spec_ML_kurucz_validation.hdf', split=False, scale=False, feature=False)
+    data = Data('spec_ML_marcs_validation.hdf', split=False, scale=False, feature=False)
     X_para = data.X
     y_para = data.y
     if continuum is not None:
@@ -65,7 +65,7 @@ def test_set_sn4(model, clf=None, continuum=None):
 def model_evaluation(d, clf=None, continuum=None):
 
     alphas = [0.001, 0.01, 0.1, 1, 10, 100, 1000]
-    data = Data('spec_ML_kurucz_validation.hdf', split=False, scale=True, feature=False)
+    data = Data('spec_ML_marcs_validation.hdf', split=False, scale=True, feature=False)
     X_test = data.Xml
     print(X_test)
     y_para = data.y
