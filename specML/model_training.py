@@ -27,22 +27,15 @@ class Data:
             reader = pd.read_csv
         self.df = reader(fname, index_col=0)
         self.df = self.df.apply(pd.to_numeric)
-        #self.df.set_index('spectrum', inplace=True)
-        #self.df = self.df[self.df['teff'] < 6800]
-        #self.df = self.df[self.df['feh'] > -2.0]
         self.df = self.df.reset_index(drop=True)
 
         self._prepare_data()
         if self.feature:
-            #self.feature_selection_best()
-            #self.feature_selection_variance()
-            #self.feature_selection_percentile()
             self.feature_selection_rfe()
         if self.split:
             self.split_data()
         if self.scale:
             self.scale_data()
-        #X.data, y.data are the trained data, X_test and y_test are not scaled!
 
     def get_wavelength(self):
         wavelength = np.array(list(map(float, self.y.columns.values)))
@@ -68,7 +61,6 @@ class Data:
             self.X['logg*alpha'] = self.X['logg'] * self.X['alpha']
 
     def flux_removal(self, cutoff=0.998, percent=40):
-        #print('The percentage of flux points dropped is %s with a %s cutoff.' % (percent, cutoff))
         continuum = []
         for wavelength in self.ylabel[:]:
             flux = self.y[wavelength]
@@ -130,7 +122,6 @@ class Data:
 
     def feature_selection_variance(self):
         feature_names = ['teff', 'logg', 'feh', 'alpha', 'teff**2', 'logg**2', 'feh**2', 'alpha**2', 'teff*logg', 'teff*feh', 'logg*feh', 'teff*alpha', 'alpha*feh', 'logg*alpha']
-        y = self.y.values
         selector = VarianceThreshold(0.35)
         selector.fit(self.X)
         features = selector.get_support(indices=True)
@@ -146,7 +137,6 @@ class Data:
         totalscore = []
         model = linear_model.LinearRegression()
         selector = RFE(estimator=model, n_features_to_select=n_features_to_select)
-        k = n_features_to_select + 1
         for i in range(2400):
             selector.fit_transform(self.X, y[:, i])
             ind = selector.support_
@@ -160,14 +150,14 @@ class Data:
         self.X = self.X.loc[:, self.xlabel]
 
 class Model:
-    def __init__(self, data, classifier='linear', save=True, load=False, fname='FASMA_ML.pkl'):
+    def __init__(self, data=None, classifier='linear', save=True, load=False, train=True, fname='FASMA_ML.pkl'):
         self.classifier = classifier
         self.data = data
         self.save = save
-        self.load = load
         self.fname = fname
-        self.X_train, self.y_train = data.X, data.y
-        self.xlabel = data.xlabel
+        if data is not None:
+            self.X_train, self.y_train = data.X, data.y
+            self.xlabel = data.xlabel
 
         if self.classifier == 'linear':
             self.clf = linear_model.LinearRegression(n_jobs=-1, normalize=True)
@@ -187,7 +177,7 @@ class Model:
             self.clf = linear_model.HuberRegressor()
 
         # Train the classifier
-        if not self.load:
+        if not load or train:
             t = time()
             self.train_classifier()
             print('Trained classifier in {}s'.format(round(time()-t, 2)))
@@ -195,17 +185,12 @@ class Model:
             with open(self.fname, 'rb') as f:
                 self.clf = cPickle.load(f)
 
-        colormap = plt.cm.gist_ncar
-        plt.gca().set_prop_cycle('color', [colormap(i) for i in np.linspace(0, 0.9, len(self.xlabel))])
-        for i, x in enumerate(self.xlabel):
-            plt.plot(self.clf.coef_.T[i], label=self.xlabel[i])
-        plt.legend()
-        plt.show()
-        plt.plot(self.clf.intercept_)
-        plt.show()
+    @staticmethod
+    def load_model(fname='FASMA_ML.pkl'):
+        with open(fname, 'rb') as f:
+            return cPickle.load(f)
 
     def train_classifier(self):
-        print(self.clf)
         self.clf.fit(self.X_train, self.y_train)
         if self.save:
             with open(self.fname, 'wb') as f:
@@ -232,8 +217,7 @@ class Model:
 
 
 if __name__ == '__main__':
-    from astropy.io import fits
-
+    ### Train a model from scratch
     data = Data('spec_ML.hdf', with_quadratic_terms=True, split=True, scale=True)
     data.flux_removal(cutoff=0.999, percent=10)
     model = Model(data, classifier='linear', load=False)
@@ -241,25 +225,13 @@ if __name__ == '__main__':
     teff, logg, feh, alpha = 6800, 4.2, -0.6, 0.22
     flux = model.get_spectrum((teff, logg, feh, alpha))
 
-    #data = Data('spec_ML.hdf', with_quadratic_terms=True, split=True, scale=False)
-    #data.flux_removal(cutoff=0.999, percent=30)
-    #model = Model(data, classifier='linear', load=False)
-    #wscl = data.get_wavelength()
-    #fscl = model.get_spectrum((teff, logg, feh, alpha))
-
-    #path = '/home/mtsantaki/oporto/gaia_synthetic_kurucz/results_int_01/'
-    #hdulist = fits.open(path + str(teff) + '_' + str(logg) + '_' + str(feh) + '_1.0_3.21_3.0_' + str(alpha) + '_11200_int.spec')
-    #x = hdulist[1].data
-    #f = x['flux']
-    #w = x['wavelength']
     plt.figure(figsize=(12, 6))
     plt.plot(wavelength, flux, 'o', label='scaled')
-    #plt.plot(wscl, fscl, label='not scaled')
-    #plt.plot(w, f, label='model')
     plt.legend()
     plt.show()
 
-    #plt.plot(wavelength, f - flux, label='scaled')
-    #plt.plot(wavelength, f - fscl, label='not scaled')
-    #plt.legend()
-    #plt.show()
+    ### Load a model (simple way)
+    clf = Model.load_model()
+    
+    ### Load a model into Model object
+    model = Model(train=False, load=True)
