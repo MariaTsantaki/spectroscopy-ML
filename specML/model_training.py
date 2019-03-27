@@ -1,4 +1,5 @@
 from __future__ import division
+from typing import Tuple, Any
 import numpy as np
 from sklearn import linear_model, preprocessing
 from sklearn.model_selection import train_test_split
@@ -37,9 +38,9 @@ class Data:
         if self.scale:
             self.scale_data()
 
-    def get_wavelength(self):
-        wavelength = np.array(list(map(float, self.y.columns.values)))
-        return wavelength
+    @property
+    def wavelength(self):
+        return np.array(list(map(float, self.y.columns.values)))
 
     def _prepare_data(self):
         self.xlabel = ['teff', 'logg', 'feh', 'alpha']
@@ -149,6 +150,15 @@ class Data:
         self.xlabel = np.delete(self.xlabel, index)
         self.X = self.X.loc[:, self.xlabel]
 
+class ShadowData:
+    def __init__(self, *args, **kwargs):
+        self.with_quadratic_terms = kwargs.get('with_quadratic_terms')
+        self.feature = kwargs.get('feature')
+        self.ix = kwargs.get('ix')
+        self.scale = kwargs.get('scale')
+        self.scaler = kwargs.get('scaler')
+        self.wavelength = kwargs.get('wavelength')
+
 class Model:
     def __init__(self, data=None, classifier='linear', save=True, load=False, train=True, fname='FASMA_ML.pkl'):
         self.classifier = classifier
@@ -182,19 +192,29 @@ class Model:
             self.train_classifier()
             print('Trained classifier in {}s'.format(round(time()-t, 2)))
         else:
-            with open(self.fname, 'rb') as f:
-                self.clf = cPickle.load(f)
+            self.clf, self.data = Model.load_model(self.fname)
 
     @staticmethod
     def load_model(fname='FASMA_ML.pkl'):
         with open(fname, 'rb') as f:
             return cPickle.load(f)
 
+    @classmethod
+    def open_model(cls, fname='FASMA_large_ML.pkl'):
+        return cls(save=False, load=True, train=False, fname=fname)
+
     def train_classifier(self):
         self.clf.fit(self.X_train, self.y_train)
         if self.save:
+            kw = {'with_quadratic_terms': self.data.with_quadratic_terms,
+                  'feature': self.data.feature,
+                  'ix': self.data.ix,
+                  'scale': self.data.scale,
+                  'scaler': self.data.scaler,
+                  'wavelength': self.data.wavelength}
+            data = ShadowData(**kw)
             with open(self.fname, 'wb') as f:
-                cPickle.dump(self.clf, f)
+                cPickle.dump((self.clf, data), f)
 
     def _get_label_vector(self, p):
         teff, logg, feh, alpha = p
@@ -221,7 +241,7 @@ if __name__ == '__main__':
     data = Data('spec_ML.hdf', with_quadratic_terms=True, split=True, scale=True)
     data.flux_removal(cutoff=0.999, percent=10)
     model = Model(data, classifier='linear', load=False)
-    wavelength = data.get_wavelength()
+    wavelength = data.wavelength
     teff, logg, feh, alpha = 6800, 4.2, -0.6, 0.22
     flux = model.get_spectrum((teff, logg, feh, alpha))
 
@@ -231,7 +251,7 @@ if __name__ == '__main__':
     plt.show()
 
     ### Load a model (simple way)
-    clf = Model.load_model()
+    clf, data = Model.load_model()
     
     ### Load a model into Model object
-    model = Model(train=False, load=True)
+    model = Model.open_model('FASMA_large_ML.pkl')
